@@ -1,6 +1,10 @@
 library opentype_tables;
 
+import 'dart:typed_data';
 
+import 'package:opentype/opentype.dart';
+
+import '../Math.dart' as Math;
 
 part './cmap.dart';
 part './cff.dart';

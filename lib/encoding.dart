@@ -140,7 +140,7 @@ class DefaultEncoding {
   charToGlyphIndex(c) {
     var code = c.codePointAt(0);
     var glyphs = this.font.glyphs;
-    if (glyphs) {
+    if (glyphs != null) {
       for (var i = 0; i < glyphs.length; i += 1) {
         var glyph = glyphs.get(i);
         for (var j = 0; j < glyph.unicodes.length; j += 1) {
@@ -227,7 +227,9 @@ class GlyphNames {
 
   GlyphNames(Map<String, dynamic> post) {
     var _v = post["version"];
-    if (_v == 1) {
+
+
+    if (_v == 1.0) {
       this.names = standardNames.sublist(0);
     } else if(_v == 2) {
 
@@ -249,7 +251,7 @@ class GlyphNames {
         this.names[i] = standardNames[_ii];
       }
 
-    } else if(_v == 3) {
+    } else if(_v == 3.0) {
       this.names = [];
     } else {
       this.names = [];
@@ -270,7 +272,11 @@ class GlyphNames {
    * @return {string}
    */
   glyphIndexToName(gid) {
-    return this.names[gid];
+    if(gid >= this.names.length) {
+      return null;
+    } else {
+      return this.names[gid];
+    }
   }
 
 
@@ -278,25 +284,25 @@ class GlyphNames {
 
 Function addGlyphNamesAll = (font) {
     var glyph;
-    var glyphIndexMap = font.tables.cmap.glyphIndexMap;
+    var glyphIndexMap = font.tables["cmap"]["glyphIndexMap"];
     var charCodes = glyphIndexMap.keys.toList();
 
     for (var i = 0; i < charCodes.length; i += 1) {
         var c = charCodes[i];
         var glyphIndex = glyphIndexMap[c];
         glyph = font.glyphs.get(glyphIndex);
-        glyph.addUnicode(int.parse(c));
+        glyph.addUnicode(int.parse(c.toString()));
     }
 
     for (var i = 0; i < font.glyphs.length; i += 1) {
         glyph = font.glyphs.get(i);
-        if (font.cffEncoding) {
+        if ( font.cffEncoding != null ) {
             if (font.isCIDFont) {
                 glyph.name = 'gid${i}';
             } else {
                 glyph.name = font.cffEncoding.charset[i];
             }
-        } else if (font.glyphNames.names) {
+        } else if (font.glyphNames.names != null) {
             glyph.name = font.glyphNames.glyphIndexToName(i);
         }
     }
@@ -327,7 +333,7 @@ Function addGlyphNamesToUnicodeMap = (font) {
  * @param {Object}
  */
 Function addGlyphNames = (font, opt) {
-  if (opt.lowMemory) {
+  if (opt["lowMemory"] == true) {
     addGlyphNamesToUnicodeMap(font);
   } else {
     addGlyphNamesAll(font);

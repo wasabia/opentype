@@ -11,8 +11,12 @@ void main() {
 
     print(" data.... ${data.length} ");
 
-    parseBuffer(data, null);
+    final font = parseBuffer(data, null);
     
+    print(font);
+    print(font.numGlyphs);
+    print(font.tables);
+    print(font.glyphs.glyphs);
 
   });
 }

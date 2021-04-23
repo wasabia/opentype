@@ -112,21 +112,21 @@ Function parseWOFFTableEntries = (data, numTables) {
  * @param  {Object}
  * @return {TableData}
  */
-Function uncompressTable = (data, tableEntry) {
-    if (tableEntry.compression == 'WOFF') {
-        var inBuffer = new Uint8List.view(data.buffer, tableEntry.offset + 2, tableEntry.compressedLength - 2);
-        var outBuffer = new Uint8List(tableEntry.length);
-        // inflate(inBuffer, outBuffer);
-        if (outBuffer.lengthInBytes != tableEntry.length) {
-            throw('Decompression error: ' + tableEntry.tag + ' decompressed length doesn\'t match recorded length');
-        }
+Map<String, dynamic> uncompressTable(data, Map<String, dynamic> tableEntry) {
+  if (tableEntry["compression"] == 'WOFF') {
+      var inBuffer = new Uint8List.view(data.buffer, tableEntry["offset"] + 2, tableEntry["compressedLength"] - 2);
+      var outBuffer = new Uint8List(tableEntry.length);
+      // inflate(inBuffer, outBuffer);
+      if (outBuffer.lengthInBytes != tableEntry.length) {
+          throw('Decompression error: ' + tableEntry["tag"] + ' decompressed length doesn\'t match recorded length');
+      }
 
-        var view = DataView(outBuffer.buffer, 0);
-        return {"data": view, "offset": 0};
-    } else {
-        return {"data": data, "offset": tableEntry.offset};
-    }
-};
+      var view = DataView(outBuffer.buffer, 0);
+      return {"data": view, "offset": 0};
+  } else {
+      return {"data": data, "offset": tableEntry["offset"]};
+  }
+}
 
 // Public API ///////////////////////////////////////////////////////////
 
@@ -183,166 +183,167 @@ Function parseBuffer = (Uint8List buffer, opt) {
         throw('Unsupported OpenType signature ' + signature);
     }
 
-    // var cffTableEntry;
-    // var fvarTableEntry;
-    // var glyfTableEntry;
-    // var gdefTableEntry;
-    // var gposTableEntry;
-    // var gsubTableEntry;
-    // var hmtxTableEntry;
-    // var kernTableEntry;
-    // var locaTableEntry;
-    // var nameTableEntry;
-    // var metaTableEntry;
-    // var p;
+    var cffTableEntry;
+    var fvarTableEntry;
+    var glyfTableEntry;
+    var gdefTableEntry;
+    var gposTableEntry;
+    var gsubTableEntry;
+    var hmtxTableEntry;
+    var kernTableEntry;
+    var locaTableEntry;
+    var nameTableEntry;
+    var metaTableEntry;
+    var p;
 
-    // for (var i = 0; i < numTables; i += 1) {
-    //     var tableEntry = tableEntries[i];
-    //     var table;
-    //     switch (tableEntry.tag) {
-    //         case 'cmap':
-    //             table = uncompressTable(data, tableEntry);
-    //             font.tables.cmap = cmap.parse(table.data, table.offset);
-    //             font.encoding = new CmapEncoding(font.tables.cmap);
-    //             break;
-    //         case 'cvt ' :
-    //             table = uncompressTable(data, tableEntry);
-    //             p = new Parser(table.data, table.offset);
-    //             font.tables.cvt = p.parseShortList(tableEntry.length / 2);
-    //             break;
-    //         case 'fvar':
-    //             fvarTableEntry = tableEntry;
-    //             break;
-    //         case 'fpgm' :
-    //             table = uncompressTable(data, tableEntry);
-    //             p = new Parser(table.data, table.offset);
-    //             font.tables.fpgm = p.parseByteList(tableEntry.length);
-    //             break;
-    //         case 'head':
-    //             table = uncompressTable(data, tableEntry);
-    //             font.tables.head = head.parse(table.data, table.offset);
-    //             font.unitsPerEm = font.tables.head.unitsPerEm;
-    //             indexToLocFormat = font.tables.head.indexToLocFormat;
-    //             break;
-    //         case 'hhea':
-    //             table = uncompressTable(data, tableEntry);
-    //             font.tables.hhea = hhea.parse(table.data, table.offset);
-    //             font.ascender = font.tables.hhea.ascender;
-    //             font.descender = font.tables.hhea.descender;
-    //             font.numberOfHMetrics = font.tables.hhea.numberOfHMetrics;
-    //             break;
-    //         case 'hmtx':
-    //             hmtxTableEntry = tableEntry;
-    //             break;
-    //         case 'ltag':
-    //             table = uncompressTable(data, tableEntry);
-    //             ltagTable = ltag.parse(table.data, table.offset);
-    //             break;
-    //         case 'maxp':
-    //             table = uncompressTable(data, tableEntry);
-    //             font.tables.maxp = maxp.parse(table.data, table.offset);
-    //             font.numGlyphs = font.tables.maxp.numGlyphs;
-    //             break;
-    //         case 'name':
-    //             nameTableEntry = tableEntry;
-    //             break;
-    //         case 'OS/2':
-    //             table = uncompressTable(data, tableEntry);
-    //             font.tables.os2 = os2.parse(table.data, table.offset);
-    //             break;
-    //         case 'post':
-    //             table = uncompressTable(data, tableEntry);
-    //             font.tables.post = post.parse(table.data, table.offset);
-    //             font.glyphNames = new GlyphNames(font.tables["post"]);
-    //             break;
-    //         case 'prep' :
-    //             table = uncompressTable(data, tableEntry);
-    //             p = new Parser(table.data, table.offset);
-    //             font.tables.prep = p.parseByteList(tableEntry.length);
-    //             break;
-    //         case 'glyf':
-    //             glyfTableEntry = tableEntry;
-    //             break;
-    //         case 'loca':
-    //             locaTableEntry = tableEntry;
-    //             break;
-    //         case 'CFF ':
-    //             cffTableEntry = tableEntry;
-    //             break;
-    //         case 'kern':
-    //             kernTableEntry = tableEntry;
-    //             break;
-    //         case 'GDEF':
-    //             gdefTableEntry = tableEntry;
-    //             break;
-    //         case 'GPOS':
-    //             gposTableEntry = tableEntry;
-    //             break;
-    //         case 'GSUB':
-    //             gsubTableEntry = tableEntry;
-    //             break;
-    //         case 'meta':
-    //             metaTableEntry = tableEntry;
-    //             break;
-    //     }
-    // }
+    for (var i = 0; i < numTables; i += 1) {
+        Map<String, dynamic> tableEntry = tableEntries[i];
+        Map<String, dynamic> table;
+        print("numTables: ${i} ${tableEntry}  ");
+        switch (tableEntry["tag"]) {
+            case 'cmap':
+                table = uncompressTable(data, tableEntry);
+                font.tables["cmap"] = parseCmapTable(table["data"], table["offset"]);
+                font.encoding = new CmapEncoding(font.tables["cmap"]);
+                break;
+            case 'cvt ' :
+                table = uncompressTable(data, tableEntry);
+                p = new Parser(table["data"], table["offset"]);
+                font.tables["cvt"] = p.parseShortList(tableEntry.length / 2);
+                break;
+            case 'fvar':
+                fvarTableEntry = tableEntry;
+                break;
+            case 'fpgm' :
+                table = uncompressTable(data, tableEntry);
+                p = new Parser(table["data"], table["offset"]);
+                font.tables["fpgm"] = p.parseByteList(tableEntry.length);
+                break;
+            case 'head':
+                table = uncompressTable(data, tableEntry);
+                font.tables["head"] = parseHeadTable(table["data"], table["offset"]);
+                font.unitsPerEm = font.tables["head"]["unitsPerEm"];
+                indexToLocFormat = font.tables["head"]["indexToLocFormat"];
+                break;
+            case 'hhea':
+                table = uncompressTable(data, tableEntry);
+                font.tables["hhea"] = parseHheaTable(table["data"], table["offset"]);
+                font.ascender = font.tables["hhea"]["ascender"];
+                font.descender = font.tables["hhea"]["descender"];
+                font.numberOfHMetrics = font.tables["hhea"]["numberOfHMetrics"];
+                break;
+            case 'hmtx':
+                hmtxTableEntry = tableEntry;
+                break;
+            case 'ltag':
+                table = uncompressTable(data, tableEntry);
+                ltagTable = parseLtagTable(table["data"], table["offset"]);
+                break;
+            case 'maxp':
+                table = uncompressTable(data, tableEntry);
+                font.tables["maxp"] = parseMaxpTable(table["data"], table["offset"]);
+                font.numGlyphs = font.tables["maxp"]["numGlyphs"];
+                break;
+            case 'name':
+                nameTableEntry = tableEntry;
+                break;
+            case 'OS/2':
+                table = uncompressTable(data, tableEntry);
+                font.tables["os2"] = parseOS2Table(table["data"], table["offset"]);
+                break;
+            case 'post':
+                table = uncompressTable(data, tableEntry);
+                font.tables["post"] = parsePostTable(table["data"], table["offset"]);
+                font.glyphNames = new GlyphNames(font.tables["post"]);
+                break;
+            case 'prep' :
+                table = uncompressTable(data, tableEntry);
+                p = new Parser(table["data"], table["offset"]);
+                font.tables["prep"] = p.parseByteList(tableEntry.length);
+                break;
+            case 'glyf':
+                glyfTableEntry = tableEntry;
+                break;
+            case 'loca':
+                locaTableEntry = tableEntry;
+                break;
+            case 'CFF ':
+                cffTableEntry = tableEntry;
+                break;
+            case 'kern':
+                kernTableEntry = tableEntry;
+                break;
+            case 'GDEF':
+                gdefTableEntry = tableEntry;
+                break;
+            case 'GPOS':
+                gposTableEntry = tableEntry;
+                break;
+            case 'GSUB':
+                gsubTableEntry = tableEntry;
+                break;
+            case 'meta':
+                metaTableEntry = tableEntry;
+                break;
+        }
+    }
 
-    // var nameTable = uncompressTable(data, nameTableEntry);
-    // font.tables.name = _name.parse(nameTable.data, nameTable.offset, ltagTable);
-    // font.names = font.tables.name;
+    var nameTable = uncompressTable(data, nameTableEntry);
+    font.tables["name"] = parseNameTable(nameTable["data"], nameTable["offset"], ltagTable);
+    font.names = font.tables["name"];
 
-    // if (glyfTableEntry && locaTableEntry) {
-    //     var shortVersion = indexToLocFormat == 0;
-    //     var locaTable = uncompressTable(data, locaTableEntry);
-    //     var locaOffsets = loca.parse(locaTable.data, locaTable.offset, font.numGlyphs, shortVersion);
-    //     var glyfTable = uncompressTable(data, glyfTableEntry);
-    //     font.glyphs = glyf.parse(glyfTable.data, glyfTable.offset, locaOffsets, font, opt);
-    // } else if (cffTableEntry) {
-    //     var cffTable = uncompressTable(data, cffTableEntry);
-    //     cff.parse(cffTable.data, cffTable.offset, font, opt);
-    // } else {
-    //     throw('Font doesn\'t contain TrueType or CFF outlines.');
-    // }
+    if ( glyfTableEntry != null && locaTableEntry != null ) {
+        var shortVersion = indexToLocFormat == 0;
+        Map<String, dynamic> locaTable = uncompressTable(data, locaTableEntry);
+        var locaOffsets = parseLocaTable(locaTable["data"], locaTable["offset"], font.numGlyphs, shortVersion);
+        Map<String, dynamic> glyfTable = uncompressTable(data, glyfTableEntry);
+        font.glyphs = parseGlyfTable(glyfTable["data"], glyfTable["offset"], locaOffsets, font, opt);
+    } else if (cffTableEntry) {
+        Map<String, dynamic> cffTable = uncompressTable(data, cffTableEntry);
+        parseCFFTable(cffTable["data"], cffTable["offset"], font, opt);
+    } else {
+        throw('Font doesn\'t contain TrueType or CFF outlines.');
+    }
 
-    // var hmtxTable = uncompressTable(data, hmtxTableEntry);
-    // hmtx.parse(font, hmtxTable.data, hmtxTable.offset, font.numberOfHMetrics, font.numGlyphs, font.glyphs, opt);
-    // addGlyphNames(font, opt);
+    Map<String, dynamic> hmtxTable = uncompressTable(data, hmtxTableEntry);
+    parseHmtxTable(font, hmtxTable["data"], hmtxTable["offset"], font.numberOfHMetrics, font.numGlyphs, font.glyphs, opt);
+    addGlyphNames(font, opt);
 
-    // if (kernTableEntry) {
-    //     var kernTable = uncompressTable(data, kernTableEntry);
-    //     font.kerningPairs = kern.parse(kernTable.data, kernTable.offset);
-    // } else {
-    //     font.kerningPairs = {};
-    // }
+    if (kernTableEntry != null) {
+        Map<String, dynamic> kernTable = uncompressTable(data, kernTableEntry);
+        font.kerningPairs = parseKernTable(kernTable["data"], kernTable["offset"]);
+    } else {
+        font.kerningPairs = {};
+    }
 
-    // if (gdefTableEntry) {
-    //     var gdefTable = uncompressTable(data, gdefTableEntry);
-    //     font.tables.gdef = gdef.parse(gdefTable.data, gdefTable.offset);
-    // }
+    if ( gdefTableEntry != null ) {
+        Map<String, dynamic> gdefTable = uncompressTable(data, gdefTableEntry);
+        font.tables["gdef"] = parseGDEFTable(gdefTable["data"], gdefTable["offset"]);
+    }
 
-    // if (gposTableEntry) {
-    //     var gposTable = uncompressTable(data, gposTableEntry);
-    //     font.tables.gpos = gpos.parse(gposTable.data, gposTable.offset);
-    //     font.position.init();
-    // }
+    if (gposTableEntry != null) {
+        Map<String, dynamic> gposTable = uncompressTable(data, gposTableEntry);
+        font.tables["gpos"] = parseGposTable(gposTable["data"], gposTable["offset"]);
+        font.position.init();
+    }
 
-    // if (gsubTableEntry) {
-    //     var gsubTable = uncompressTable(data, gsubTableEntry);
-    //     font.tables.gsub = gsub.parse(gsubTable.data, gsubTable.offset);
-    // }
+    if (gsubTableEntry != null ) {
+        Map<String, dynamic> gsubTable = uncompressTable(data, gsubTableEntry);
+        font.tables["gsub"] = parseGsubTable(gsubTable["data"], gsubTable["offset"]);
+    }
 
-    // if (fvarTableEntry) {
-    //     var fvarTable = uncompressTable(data, fvarTableEntry);
-    //     font.tables.fvar = fvar.parse(fvarTable.data, fvarTable.offset, font.names);
-    // }
+    if (fvarTableEntry != null) {
+        Map<String, dynamic> fvarTable = uncompressTable(data, fvarTableEntry);
+        font.tables["fvar"] = parseFvarTable(fvarTable["data"], fvarTable["offset"], font.names);
+    }
 
-    // if (metaTableEntry) {
-    //     var metaTable = uncompressTable(data, metaTableEntry);
-    //     font.tables.meta = meta.parse(metaTable.data, metaTable.offset);
-    //     font.metas = font.tables.meta;
-    // }
+    if (metaTableEntry != null) {
+        Map<String, dynamic> metaTable = uncompressTable(data, metaTableEntry);
+        font.tables["meta"] = parseMetaTable(metaTable["data"], metaTable["offset"]);
+        font.metas = font.tables["meta"];
+    }
 
-    // return font;
+    return font;
 };
 
 /**

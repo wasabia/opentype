@@ -14,6 +14,7 @@ class Path {
   String fill = "black";
   late dynamic? stroke;
   int strokeWidth = 1;
+  late dynamic unitsPerEm;
 
   Path() {
   }
@@ -138,17 +139,17 @@ class Path {
    * @param  {Array} pathOrCommands - another opentype.Path, an opentype.BoundingBox, or an array of commands.
    */
   extend(pathOrCommands) {
-      if (pathOrCommands.commands) {
-          pathOrCommands = pathOrCommands.commands;
-      } else if (pathOrCommands is BoundingBox) {
-          var box = pathOrCommands;
-          this.moveTo(box.x1, box.y1);
-          this.lineTo(box.x2, box.y1);
-          this.lineTo(box.x2, box.y2);
-          this.lineTo(box.x1, box.y2);
-          this.close();
-          return;
-      }
+    if (pathOrCommands.commands) {
+        pathOrCommands = pathOrCommands.commands;
+    } else if (pathOrCommands is BoundingBox) {
+        var box = pathOrCommands;
+        this.moveTo(box.x1!, box.y1!);
+        this.lineTo(box.x2, box.y1);
+        this.lineTo(box.x2, box.y2);
+        this.lineTo(box.x1, box.y2);
+        this.close();
+        return;
+    }
 
     this.commands.add(pathOrCommands);
   }

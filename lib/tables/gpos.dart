@@ -4,110 +4,120 @@ part of opentype_tables;
 // The `GPOS` table contains kerning pairs, among other things.
 // https://docs.microsoft.com/en-us/typography/opentype/spec/gpos
 
-import check from '../check';
-import { Parser } from '../parse';
-import table from '../table';
 
-const subtableParsers = new Array(10);         // subtableParsers[0] is unused
 
 // https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-1-single-adjustment-positioning-subtable
 // this = Parser instance
-subtableParsers[1] = function parseLookup1() {
-    const start = this.offset + this.relativeOffset;
-    const posformat = this.parseUShort();
-    if (posformat === 1) {
-        return {
-            posFormat: 1,
-            coverage: this.parsePointer(Parser.coverage),
-            value: this.parseValueRecord()
+parseLookup1(scope) {
+    var start = scope.offset + scope.relativeOffset;
+    var posformat = scope.parseUShort();
+    if (posformat == 1) {
+      return {
+        "posFormat": 1,
+        "coverage": scope.parsePointer(Parser.coverage),
+        "value": scope.parseValueRecord()
         };
-    } else if (posformat === 2) {
-        return {
-            posFormat: 2,
-            coverage: this.parsePointer(Parser.coverage),
-            values: this.parseValueRecordList()
-        };
+    } else if (posformat == 2) {
+      return {
+        "posFormat": 2,
+        "coverage": scope.parsePointer(Parser.coverage),
+        "values": scope.parseValueRecordList()
+      };
     }
-    check.assert(false, '0x' + start.toString(16) + ': GPOS lookup type 1 format must be 1 or 2.');
-};
+    assertfn(false, '0x' + start.toString(16) + ': GPOS lookup type 1 format must be 1 or 2.');
+}
 
-// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable
-subtableParsers[2] = function parseLookup2() {
-    const start = this.offset + this.relativeOffset;
-    const posFormat = this.parseUShort();
-    check.assert(posFormat === 1 || posFormat === 2, '0x' + start.toString(16) + ': GPOS lookup type 2 format must be 1 or 2.');
-    const coverage = this.parsePointer(Parser.coverage);
-    const valueFormat1 = this.parseUShort();
-    const valueFormat2 = this.parseUShort();
-    if (posFormat === 1) {
+// // https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable
+parseLookup2(scope) {
+    var start = scope.offset + scope.relativeOffset;
+    var posFormat = scope.parseUShort();
+    assertfn(posFormat == 1 || posFormat == 2, '0x' + start.toString(16) + ': GPOS lookup type 2 format must be 1 or 2.');
+    var coverage = scope.parsePointer(Parser.coverage);
+    var valueFormat1 = scope.parseUShort();
+    var valueFormat2 = scope.parseUShort();
+    if (posFormat == 1) {
         // Adjustments for Glyph Pairs
         return {
-            posFormat: posFormat,
-            coverage: coverage,
-            valueFormat1: valueFormat1,
-            valueFormat2: valueFormat2,
-            pairSets: this.parseList(Parser.pointer(Parser.list(function() {
+            "posFormat": posFormat,
+            "coverage": coverage,
+            "valueFormat1": valueFormat1,
+            "valueFormat2": valueFormat2,
+            "pairSets": scope.parseList(Parser.pointer(Parser.list(() {
                 return {        // pairValueRecord
-                    secondGlyph: this.parseUShort(),
-                    value1: this.parseValueRecord(valueFormat1),
-                    value2: this.parseValueRecord(valueFormat2)
+                    "secondGlyph": scope.parseUShort(),
+                    "value1": scope.parseValueRecord(valueFormat1),
+                    "value2": scope.parseValueRecord(valueFormat2)
                 };
             })))
         };
-    } else if (posFormat === 2) {
-        const classDef1 = this.parsePointer(Parser.classDef);
-        const classDef2 = this.parsePointer(Parser.classDef);
-        const class1Count = this.parseUShort();
-        const class2Count = this.parseUShort();
+    } else if (posFormat == 2) {
+        var classDef1 = scope.parsePointer(Parser.classDef);
+        var classDef2 = scope.parsePointer(Parser.classDef);
+        var class1Count = scope.parseUShort();
+        var class2Count = scope.parseUShort();
         return {
             // Class Pair Adjustment
-            posFormat: posFormat,
-            coverage: coverage,
-            valueFormat1: valueFormat1,
-            valueFormat2: valueFormat2,
-            classDef1: classDef1,
-            classDef2: classDef2,
-            class1Count: class1Count,
-            class2Count: class2Count,
-            classRecords: this.parseList(class1Count, Parser.list(class2Count, function() {
+            "posFormat": posFormat,
+            "coverage": coverage,
+            "valueFormat1": valueFormat1,
+            "valueFormat2": valueFormat2,
+            "classDef1": classDef1,
+            "classDef2": classDef2,
+            "class1Count": class1Count,
+            "class2Count": class2Count,
+            "classRecords": scope.parseList(class1Count, Parser.list(class2Count, () {
                 return {
-                    value1: this.parseValueRecord(valueFormat1),
-                    value2: this.parseValueRecord(valueFormat2)
+                    "value1": scope.parseValueRecord(valueFormat1),
+                    "value2": scope.parseValueRecord(valueFormat2)
                 };
             }))
         };
     }
-};
+}
 
-subtableParsers[3] = function parseLookup3() { return { error: 'GPOS Lookup 3 not supported' }; };
-subtableParsers[4] = function parseLookup4() { return { error: 'GPOS Lookup 4 not supported' }; };
-subtableParsers[5] = function parseLookup5() { return { error: 'GPOS Lookup 5 not supported' }; };
-subtableParsers[6] = function parseLookup6() { return { error: 'GPOS Lookup 6 not supported' }; };
-subtableParsers[7] = function parseLookup7() { return { error: 'GPOS Lookup 7 not supported' }; };
-subtableParsers[8] = function parseLookup8() { return { error: 'GPOS Lookup 8 not supported' }; };
-subtableParsers[9] = function parseLookup9() { return { error: 'GPOS Lookup 9 not supported' }; };
+parseLookup3() { return { "error": 'GPOS Lookup 3 not supported' }; }
+parseLookup4() { return { "error": 'GPOS Lookup 4 not supported' }; }
+parseLookup5() { return { "error": 'GPOS Lookup 5 not supported' }; }
+parseLookup6() { return { "error": 'GPOS Lookup 6 not supported' }; }
+parseLookup7() { return { "error": 'GPOS Lookup 7 not supported' }; }
+parseLookup8() { return { "error": 'GPOS Lookup 8 not supported' }; }
+parseLookup9() { return { "error": 'GPOS Lookup 9 not supported' }; }
+
+// subtableParsers[0] is unused
+List<Function?> subtableParsers = [
+  null,
+  parseLookup1,
+  parseLookup2,
+  parseLookup3,
+  parseLookup4,
+  parseLookup5,
+  parseLookup6,
+  parseLookup7,
+  parseLookup8,
+  parseLookup9
+];
 
 // https://docs.microsoft.com/en-us/typography/opentype/spec/gpos
-function parseGposTable(data, start) {
-    start = start || 0;
-    const p = new Parser(data, start);
-    const tableVersion = p.parseVersion(1);
-    check.argument(tableVersion === 1 || tableVersion === 1.1, 'Unsupported GPOS table version ' + tableVersion);
+Map<String, dynamic> parseGposTable(data, start) {
+    start = start ?? 0;
+    var p = new Parser(data, start);
+    var tableVersion = p.parseVersion(1);
+    argument(tableVersion == 1 || tableVersion == 1.1, 'Unsupported GPOS table version ${tableVersion}');
 
-    if (tableVersion === 1) {
+    if (tableVersion == 1) {
         return {
-            version: tableVersion,
-            scripts: p.parseScriptList(),
-            features: p.parseFeatureList(),
-            lookups: p.parseLookupList(subtableParsers)
+            "version": tableVersion,
+            "scripts": p.parseScriptList(),
+            "features": p.parseFeatureList(),
+            "lookups": p.parseLookupList(subtableParsers)
         };
     } else {
         return {
-            version: tableVersion,
-            scripts: p.parseScriptList(),
-            features: p.parseFeatureList(),
-            lookups: p.parseLookupList(subtableParsers),
-            variations: p.parseFeatureVariationsList()
+            "version": tableVersion,
+            "scripts": p.parseScriptList(),
+            "features": p.parseFeatureList(),
+            "lookups": p.parseLookupList(subtableParsers),
+            "variations": p.parseFeatureVariationsList()
         };
     }
 
@@ -115,15 +125,16 @@ function parseGposTable(data, start) {
 
 // GPOS Writing //////////////////////////////////////////////
 // NOT SUPPORTED
-const subtableMakers = new Array(10);
+var subtableMakers = new List.filled(10, null);
 
-function makeGposTable(gpos) {
-    return new table.Table('GPOS', [
-        {name: 'version', type: 'ULONG', value: 0x10000},
-        {name: 'scripts', type: 'TABLE', value: new table.ScriptList(gpos.scripts)},
-        {name: 'features', type: 'TABLE', value: new table.FeatureList(gpos.features)},
-        {name: 'lookups', type: 'TABLE', value: new table.LookupList(gpos.lookups, subtableMakers)}
-    ]);
-}
+// makeGposTable(gpos) {
+//     return new Table('GPOS', [
+//         {"name": 'version', "type": 'ULONG', "value": 0x10000},
+//         {"name": 'scripts', "type": 'TABLE', "value": ScriptList(gpos.scripts)},
+//         {"name": 'features', "type": 'TABLE', "value": FeatureList(gpos.features)},
+//         {"name": 'lookups', "type": 'TABLE', "value": LookupList(gpos.lookups, subtableMakers)}
+//     ],
+//     null);
+// }
 
-export default { parse: parseGposTable, make: makeGposTable };
+// export default { parse: parseGposTable, make: makeGposTable };

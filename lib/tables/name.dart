@@ -4,12 +4,10 @@ part of opentype_tables;
 // The `name` naming table.
 // https://www.microsoft.com/typography/OTSPEC/name.htm
 
-import { decode, encode } from '../types';
-import parse from '../parse';
-import table from '../table';
+
 
 // NameIDs for the name table.
-const nameTableNames = [
+final nameTableNames = [
     'copyright',              // 0
     'fontFamily',             // 1
     'fontSubfamily',          // 2
@@ -35,7 +33,7 @@ const nameTableNames = [
     'wwsSubfamily'            // 22
 ];
 
-const macLanguages = {
+final macLanguages = {
     0: 'en',
     1: 'fr',
     2: 'de',
@@ -169,7 +167,7 @@ const macLanguages = {
 // done as a (pretty radical) "modification" of Ethiopic.
 //
 // http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/Readme.txt
-const macLanguageToScript = {
+final macLanguageToScript = {
     0: 0,  // langEnglish → smRoman
     1: 0,  // langFrench → smRoman
     2: 0,  // langGerman → smRoman
@@ -307,7 +305,7 @@ const macLanguageToScript = {
 //
 // http://www.unicode.org/cldr/charts/latest/supplemental/likely_subtags.html
 // http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
-const windowsLanguages = {
+final windowsLanguages = {
     0x0436: 'af',
     0x041C: 'sq',
     0x0484: 'gsw',
@@ -526,10 +524,10 @@ const windowsLanguages = {
 
 // Returns a IETF BCP 47 language code, for example 'zh-Hant'
 // for 'Chinese in the traditional script'.
-function getLanguageCode(platformID, languageID, ltag) {
+getLanguageCode(platformID, languageID, ltag) {
     switch (platformID) {
         case 0:  // Unicode
-            if (languageID === 0xFFFF) {
+            if (languageID == 0xFFFF) {
                 return 'und';
             } else if (ltag) {
                 return ltag[languageID];
@@ -544,14 +542,14 @@ function getLanguageCode(platformID, languageID, ltag) {
             return windowsLanguages[languageID];
     }
 
-    return undefined;
+    return null;
 }
 
-const utf16 = 'utf-16';
+final utf16 = 'utf-16';
 
 // MacOS script ID → encoding. This table stores the default case,
 // which can be overridden by macLanguageEncodings.
-const macScriptEncodings = {
+final macScriptEncodings = {
     0: 'macintosh',           // smRoman
     1: 'x-mac-japanese',      // smJapanese
     2: 'x-mac-chinesetrad',   // smTradChinese
@@ -589,7 +587,7 @@ const macScriptEncodings = {
 // merge macScriptEncodings into macLanguageEncodings.
 //
 // http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/Readme.txt
-const macLanguageEncodings = {
+final macLanguageEncodings = {
     15: 'x-mac-icelandic',    // langIcelandic
     17: 'x-mac-turkish',      // langTurkish
     18: 'x-mac-croatian',     // langCroatian
@@ -607,65 +605,75 @@ const macLanguageEncodings = {
     146: 'x-mac-gaelic'       // langIrishGaelicScript
 };
 
-function getEncoding(platformID, encodingID, languageID) {
+getEncoding(platformID, encodingID, languageID) {
     switch (platformID) {
         case 0:  // Unicode
             return utf16;
 
         case 1:  // Apple Macintosh
-            return macLanguageEncodings[languageID] || macScriptEncodings[encodingID];
+            return macLanguageEncodings[languageID] ?? macScriptEncodings[encodingID];
 
         case 3:  // Microsoft Windows
-            if (encodingID === 1 || encodingID === 10) {
+            if (encodingID == 1 || encodingID == 10) {
                 return utf16;
             }
 
             break;
     }
 
-    return undefined;
+    return null;
 }
 
 // Parse the naming `name` table.
 // FIXME: Format 1 additional fields are not supported yet.
 // ltag is the content of the `ltag' table, such as ['en', 'zh-Hans', 'de-CH-1904'].
-function parseNameTable(data, start, ltag) {
-    const name = {};
-    const p = new parse.Parser(data, start);
-    const format = p.parseUShort();
-    const count = p.parseUShort();
-    const stringOffset = p.offset + p.parseUShort();
-    for (let i = 0; i < count; i++) {
-        const platformID = p.parseUShort();
-        const encodingID = p.parseUShort();
-        const languageID = p.parseUShort();
-        const nameID = p.parseUShort();
-        const property = nameTableNames[nameID] || nameID;
-        const byteLength = p.parseUShort();
-        const offset = p.parseUShort();
-        const language = getLanguageCode(platformID, languageID, ltag);
-        const encoding = getEncoding(platformID, encodingID, languageID);
-        if (encoding !== undefined && language !== undefined) {
-            let text;
-            if (encoding === utf16) {
-                text = decode.UTF16(data, stringOffset + offset, byteLength);
+Map<dynamic, dynamic> parseNameTable(data, start, ltag) {
+    Map<dynamic, dynamic> name = {};
+    var p = new Parser(data, start);
+    var format = p.parseUShort();
+    var count = p.parseUShort();
+    var stringOffset = p.offset + p.parseUShort();
+    for (var i = 0; i < count; i++) {
+        var platformID = p.parseUShort();
+        var encodingID = p.parseUShort();
+        var languageID = p.parseUShort();
+        var nameID = p.parseUShort();
+        
+
+        dynamic property;
+        if(nameID >= nameTableNames.length) {
+          property = nameID;
+        } else {
+          property = nameTableNames[nameID];
+        }
+  
+
+        var byteLength = p.parseUShort();
+        var offset = p.parseUShort();
+        var language = getLanguageCode(platformID, languageID, ltag);
+        var encoding = getEncoding(platformID, encodingID, languageID);
+        if (encoding != null && language != null) {
+            var text;
+            if (encoding == utf16) {
+                text = decode_UTF16(data, stringOffset + offset, byteLength);
             } else {
-                text = decode.MACSTRING(data, stringOffset + offset, byteLength, encoding);
+                text = decode_MACSTRING(data, stringOffset + offset, byteLength, encoding);
             }
 
-            if (text) {
-                let translations = name[property];
-                if (translations === undefined) {
-                    translations = name[property] = {};
-                }
+            if (text != null) {
+              var translations = name[property];
+              if (translations == null) {
+                name[property] = {};
+                translations = name[property];
+              }
 
-                translations[language] = text;
+              translations[language] = text;
             }
         }
     }
 
-    let langTagCount = 0;
-    if (format === 1) {
+    var langTagCount = 0;
+    if (format == 1) {
         // FIXME: Also handle Microsoft's 'name' table 1.
         langTagCount = p.parseUShort();
     }
@@ -675,37 +683,37 @@ function parseNameTable(data, start, ltag) {
 
 // {23: 'foo'} → {'foo': 23}
 // ['bar', 'baz'] → {'bar': 0, 'baz': 1}
-function reverseDict(dict) {
-    const result = {};
-    for (let key in dict) {
-        result[dict[key]] = parseInt(key);
+reverseDict(dict) {
+    var result = {};
+    for (var key in dict) {
+        result[dict[key]] = int.parse(key);
     }
 
     return result;
 }
 
-function makeNameRecord(platformID, encodingID, languageID, nameID, length, offset) {
-    return new table.Record('NameRecord', [
-        {name: 'platformID', type: 'USHORT', value: platformID},
-        {name: 'encodingID', type: 'USHORT', value: encodingID},
-        {name: 'languageID', type: 'USHORT', value: languageID},
-        {name: 'nameID', type: 'USHORT', value: nameID},
-        {name: 'length', type: 'USHORT', value: length},
-        {name: 'offset', type: 'USHORT', value: offset}
-    ]);
+makeNameRecord(platformID, encodingID, languageID, nameID, length, offset) {
+    return new Record('NameRecord', [
+        {"name": 'platformID', "type": 'USHORT', "value": platformID},
+        {"name": 'encodingID', "type": 'USHORT', "value": encodingID},
+        {"name": 'languageID', "type": 'USHORT', "value": languageID},
+        {"name": 'nameID', "type": 'USHORT', "value": nameID},
+        {"name": 'length', "type": 'USHORT', "value": length},
+        {"name": 'offset', "type": 'USHORT', "value": offset}
+    ], null);
 }
 
 // Finds the position of needle in haystack, or -1 if not there.
 // Like String.indexOf(), but for arrays.
-function findSubArray(needle, haystack) {
-    const needleLength = needle.length;
-    const limit = haystack.length - needleLength + 1;
+findSubArray(needle, haystack) {
+    var needleLength = needle.length;
+    var limit = haystack.length - needleLength + 1;
 
     loop:
-    for (let pos = 0; pos < limit; pos++) {
+    for (var pos = 0; pos < limit; pos++) {
         for (; pos < limit; pos++) {
-            for (let k = 0; k < needleLength; k++) {
-                if (haystack[pos + k] !== needle[k]) {
+            for (var k = 0; k < needleLength; k++) {
+                if (haystack[pos + k] != needle[k]) {
                     continue loop;
                 }
             }
@@ -717,14 +725,14 @@ function findSubArray(needle, haystack) {
     return -1;
 }
 
-function addStringToPool(s, pool) {
-    let offset = findSubArray(s, pool);
+addStringToPool(s, pool) {
+    var offset = findSubArray(s, pool);
     if (offset < 0) {
         offset = pool.length;
-        let i = 0;
-        const len = s.length;
+        var i = 0;
+        var len = s.length;
         for (; i < len; ++i) {
-            pool.push(s[i]);
+            pool.add(s[i]);
         }
 
     }
@@ -732,39 +740,39 @@ function addStringToPool(s, pool) {
     return offset;
 }
 
-function makeNameTable(names, ltag) {
-    let nameID;
-    const nameIDs = [];
+makeNameTable(names, ltag) {
+    var nameID;
+    var nameIDs = [];
 
-    const namesWithNumericKeys = {};
-    const nameTableIds = reverseDict(nameTableNames);
-    for (let key in names) {
-        let id = nameTableIds[key];
-        if (id === undefined) {
+    var namesWithNumericKeys = {};
+    var nameTableIds = reverseDict(nameTableNames);
+    for (var key in names) {
+        var id = nameTableIds[key];
+        if (id == null) {
             id = key;
         }
 
-        nameID = parseInt(id);
+        nameID = int.parse(id);
 
-        if (isNaN(nameID)) {
-            throw new Error('Name table entry "' + key + '" does not exist, see nameTableNames for complete list.');
+        if (nameID == null) {
+            throw('Name table entry "' + key + '" does not exist, see nameTableNames for complete list.');
         }
 
         namesWithNumericKeys[nameID] = names[key];
-        nameIDs.push(nameID);
+        nameIDs.add(nameID);
     }
 
-    const macLanguageIds = reverseDict(macLanguages);
-    const windowsLanguageIds = reverseDict(windowsLanguages);
+    var macLanguageIds = reverseDict(macLanguages);
+    var windowsLanguageIds = reverseDict(windowsLanguages);
 
-    const nameRecords = [];
-    const stringPool = [];
+    var nameRecords = [];
+    var stringPool = [];
 
-    for (let i = 0; i < nameIDs.length; i++) {
+    for (var i = 0; i < nameIDs.length; i++) {
         nameID = nameIDs[i];
-        const translations = namesWithNumericKeys[nameID];
-        for (let lang in translations) {
-            const text = translations[lang];
+        var translations = namesWithNumericKeys[nameID];
+        for (var lang in translations) {
+            var text = translations[lang];
 
             // For MacOS, we try to emit the name in the form that was introduced
             // in the initial version of the TrueType spec (in the late 1980s).
@@ -780,12 +788,12 @@ function makeNameTable(names, ltag) {
             // However, there are many applications and libraries that read
             // 'name' tables directly, and these will usually only recognize
             // the ancient form (silently skipping the unrecognized names).
-            let macPlatform = 1;  // Macintosh
-            let macLanguage = macLanguageIds[lang];
-            let macScript = macLanguageToScript[macLanguage];
-            const macEncoding = getEncoding(macPlatform, macScript, macLanguage);
-            let macName = encode.MACSTRING(text, macEncoding);
-            if (macName === undefined) {
+            var macPlatform = 1;  // Macintosh
+            var macLanguage = macLanguageIds[lang];
+            var macScript = macLanguageToScript[macLanguage];
+            var macEncoding = getEncoding(macPlatform, macScript, macLanguage);
+            var macName = encode_MACSTRING(text, macEncoding);
+            if (macName == null) {
                 macPlatform = 0;  // Unicode
                 macLanguage = ltag.indexOf(lang);
                 if (macLanguage < 0) {
@@ -794,42 +802,42 @@ function makeNameTable(names, ltag) {
                 }
 
                 macScript = 4;  // Unicode 2.0 and later
-                macName = encode.UTF16(text);
+                macName = encode_UTF16(text);
             }
 
-            const macNameOffset = addStringToPool(macName, stringPool);
-            nameRecords.push(makeNameRecord(macPlatform, macScript, macLanguage,
+            var macNameOffset = addStringToPool(macName, stringPool);
+            nameRecords.add(makeNameRecord(macPlatform, macScript, macLanguage,
                                             nameID, macName.length, macNameOffset));
 
-            const winLanguage = windowsLanguageIds[lang];
-            if (winLanguage !== undefined) {
-                const winName = encode.UTF16(text);
-                const winNameOffset = addStringToPool(winName, stringPool);
-                nameRecords.push(makeNameRecord(3, 1, winLanguage,
+            var winLanguage = windowsLanguageIds[lang];
+            if (winLanguage != null) {
+                var winName = encode_UTF16(text);
+                var winNameOffset = addStringToPool(winName, stringPool);
+                nameRecords.add(makeNameRecord(3, 1, winLanguage,
                                                 nameID, winName.length, winNameOffset));
             }
         }
     }
 
-    nameRecords.sort(function(a, b) {
-        return ((a.platformID - b.platformID) ||
-                (a.encodingID - b.encodingID) ||
-                (a.languageID - b.languageID) ||
+    nameRecords.sort((a, b) {
+        return ((a.platformID - b.platformID) ??
+                (a.encodingID - b.encodingID) ??
+                (a.languageID - b.languageID) ??
                 (a.nameID - b.nameID));
     });
 
-    const t = new table.Table('name', [
-        {name: 'format', type: 'USHORT', value: 0},
-        {name: 'count', type: 'USHORT', value: nameRecords.length},
-        {name: 'stringOffset', type: 'USHORT', value: 6 + nameRecords.length * 12}
-    ]);
+    var t = new Table('name', [
+        {"name": 'format', "type": 'USHORT', "value": 0},
+        {"name": 'count', "type": 'USHORT', "value": nameRecords.length},
+        {"name": 'stringOffset', "type": 'USHORT', "value": 6 + nameRecords.length * 12}
+    ], null);
 
-    for (let r = 0; r < nameRecords.length; r++) {
-        t.fields.push({name: 'record_' + r, type: 'RECORD', value: nameRecords[r]});
+    for (var r = 0; r < nameRecords.length; r++) {
+        t.fields.push({"name": 'record_${r}', "type": 'RECORD', "value": nameRecords[r]});
     }
 
-    t.fields.push({name: 'strings', type: 'LITERAL', value: stringPool});
+    t.fields.push({"name": 'strings', "type": 'LITERAL', "value": stringPool});
     return t;
 }
 
-export default { parse: parseNameTable, make: makeNameTable };
+// export default { parse: parseNameTable, make: makeNameTable };

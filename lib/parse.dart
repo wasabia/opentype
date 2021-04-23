@@ -94,7 +94,7 @@ var typeOffsets = {
 // The data is a DataView.
 class Parser {
 
-  late dynamic data;
+  late ByteData data;
   late dynamic offset;
   int relativeOffset = 0;
 
@@ -108,16 +108,14 @@ class Parser {
 
 
   parseChar() {
-      var v = this.data.getInt8(this.offset + this.relativeOffset);
-      this.relativeOffset += 1;
-      return v;
+    var v = this.data.getInt8(this.offset + this.relativeOffset);
+    this.relativeOffset += 1;
+    return v;
   }
 
   parseCard8() {
     return parseByte();
   }
-
-
   parseCard16() {
     return parseUShort();
   }
@@ -206,7 +204,7 @@ class Parser {
 
   
   parseOffset16List(count) {
-    return parseUShortList(this, count);
+    return parseUShortList(count);
   }
 
   // Parses a list of 16 bit signed integers.
@@ -242,27 +240,27 @@ class Parser {
    * itemCallback is one of the Parser methods.
    */
   parseList(count, itemCallback) {
-      if (!itemCallback) {
-          itemCallback = count;
-          count = parseUShort(this);
-      }
-      var list = List<int>.filled(count, 0);
-      for (var i = 0; i < count; i++) {
-          list[i] = itemCallback.call(this);
-      }
-      return list;
+    if (!itemCallback) {
+        itemCallback = count;
+        count = parseUShort();
+    }
+    var list = List<int>.filled(count, 0);
+    for (var i = 0; i < count; i++) {
+        list[i] = itemCallback.call(this);
+    }
+    return list;
   }
 
   parseList32(count, itemCallback) {
-      if (!itemCallback) {
-          itemCallback = count;
-          count = parseULong(this);
-      }
-      var list = List<int>.filled(count, 0);
-      for (var i = 0; i < count; i++) {
-          list[i] = itemCallback.call(this);
-      }
-      return list;
+    if (!itemCallback) {
+        itemCallback = count;
+        count = parseULong();
+    }
+    var list = List<int>.filled(count, 0);
+    for (var i = 0; i < count; i++) {
+        list[i] = itemCallback.call(this);
+    }
+    return list;
   }
 
   /**
@@ -270,20 +268,26 @@ class Parser {
    * Record count is optional, if omitted it is read from the stream.
    * Example of recordDescription: { sequenceIndex: Parser.uShort, lookupListIndex: Parser.uShort }
    */
-  parseRecordList(int count, recordDescription) {
+  parseRecordList(count, recordDescription) {
       // If the count argument is absent, read it in the stream.
-      if (!recordDescription) {
+      if (recordDescription == null) {
           recordDescription = count;
-          count = parseUShort(this);
+          count = parseUShort();
       }
       var records = List<Map>.filled(count, {});
       var fields = recordDescription.keys.toList();
       for (var i = 0; i < count; i++) {
           var rec = {};
           for (var j = 0; j < fields.length; j++) {
-              var fieldName = fields[j];
-              var fieldType = recordDescription[fieldName];
+            var fieldName = fields[j];
+            var fieldType = recordDescription[fieldName];
+
+            String _fn = fieldType.runtimeType.toString();
+            if(_fn.startsWith("()")) {
+              rec[fieldName] = fieldType.call();
+            } else {
               rec[fieldName] = fieldType.call(this);
+            }
           }
           records[i] = rec;
       }
@@ -294,7 +298,7 @@ class Parser {
     // If the count argument is absent, read it in the stream.
     if (!recordDescription) {
       recordDescription = count;
-      count = parseULong(this);
+      count = parseULong();
     }
     var records = List<Map>.filled(count, {});
     var fields = recordDescription.keys.toList();
@@ -318,7 +322,7 @@ class Parser {
    */
   Map<String, dynamic>? parseValueRecord(valueFormat) {
       if (valueFormat == null) {
-          valueFormat = parseUShort(this);
+          valueFormat = parseUShort();
       }
       if (valueFormat == 0) {
           // valueFormat2 in kerning pairs is most often 0
@@ -349,8 +353,8 @@ class Parser {
    * valueFormat and valueCount are read from the stream.
    */
   parseValueRecordList() {
-      var valueFormat = parseUShort(this);
-      var valueCount = parseUShort(this);
+      var valueFormat = parseUShort();
+      var valueCount = parseUShort();
       var values = List<Map?>.filled(valueCount, null);
       for (var i = 0; i < valueCount; i++) {
           values[i] = this.parseValueRecord(valueFormat);
@@ -363,7 +367,7 @@ class Parser {
       if (structOffset > 0) {
           // NULL offset => return null
           var _p = Parser(this.data, this.offset + structOffset);
-          return parseStruct(_p, description);
+          return _p.parseStruct(description);
       }
       return null;
   }
@@ -373,7 +377,7 @@ class Parser {
       if (structOffset > 0) {
           // NULL offset => return null
           var _p = Parser(this.data, this.offset + structOffset);
-          return parseStruct(_p, description);
+          return _p.parseStruct(description);
       }
       return null;
   }
@@ -408,7 +412,7 @@ class Parser {
               }
               list[i] = subList;
           } else {
-              list[i] = parseUShortList(this, null);
+              list[i] = this.parseUShortList(null);
           }
       }
       this.relativeOffset = relativeOffset;
@@ -426,11 +430,15 @@ class Parser {
           {
             "tag": Parser.tag,
             "script": Parser.pointer(this, {
-                "defaultLangSys": Parser.pointer(this, langSysTable),
-                "langSysRecords": Parser.recordList({
+                "defaultLangSys": Parser.pointer(langSysTable),
+                "langSysRecords": Parser.recordList(
+                  this, 
+                  {
                     "tag": Parser.tag,
                     "langSys": Parser.pointer(this, langSysTable)
-                })
+                  }, 
+                  null
+                )
             })
           }, 
           null
@@ -450,24 +458,24 @@ class Parser {
 
   parseLookupList(lookupTableParsers) {
       return this.parsePointer(Parser.list(Parser.pointer(() {
-          var lookupType = parseUShort(this);
+          var lookupType = parseUShort();
           // argument(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
-          var lookupFlag = parseUShort(this);
+          var lookupFlag = parseUShort();
           var useMarkFilteringSet = lookupFlag & 0x10;
           return {
               "lookupType": lookupType,
               "lookupFlag": lookupFlag,
               "subtables": this.parseList(Parser.pointer(this, lookupTableParsers[lookupType]), null),
-              "markFilteringSet": useMarkFilteringSet ? parseUShort(this) : null
+              "markFilteringSet": useMarkFilteringSet ? parseUShort() : null
           };
       }))) ?? [];
   }
 
   parseFeatureVariationsList() {
       return this.parsePointer32(() {
-          var majorVersion = parseUShort(this);
-          var minorVersion = parseUShort(this);
-          // argument(majorVersion == 1 && minorVersion < 1, 'GPOS/GSUB feature variations table unknown.');
+          var majorVersion = parseUShort();
+          var minorVersion = parseUShort();
+          argument(majorVersion == 1 && minorVersion < 1, 'GPOS/GSUB feature variations table unknown.');
           var featureVariations = this.parseRecordList32({
               "conditionSetOffset": Parser.offset32,
               "featureTableSubstitutionOffset": Parser.offset32
@@ -478,174 +486,241 @@ class Parser {
 
 
 
-///// Static methods ///////////////////////////////////
-// These convenience methods can be used as callbacks and should be called with "this" context set to a Parser instance.
+  parseUShort() {
+    int _offset = this.offset + this.relativeOffset;
+    var v = this.data.getUint16(this.offset + this.relativeOffset);
 
-  static Function list = (scope, count, itemCallback) {
-    return () {
+    // if(_offset > 10000000) {
+    //   print(" v: ${v} offset: ${this.offset} relativeOffset: ${this.relativeOffset}  ");
+    // }
+
+    this.relativeOffset += 2;
+    return v;
+  }
+
+  parseULong() {
+    var v = getULong(this.data, this.offset + this.relativeOffset);
+    this.relativeOffset += 4;
+    return v;
+  }
+
+  parseByte() {
+    var v = this.data.getUint8(this.offset + this.relativeOffset);
+    this.relativeOffset += 1;
+    return v;
+  }
+
+  parseTag() {
+    return this.parseString(4);
+  }
+
+
+  parseUShortList(int? count) {
+    if (count == null) { count = this.parseUShort(); }
+    var offsets = List<int>.filled(count!, 0);
+    var dataView = this.data;
+    var offset = this.offset + this.relativeOffset;
+    for (var i = 0; i < count; i++) {
+      offsets[i] = dataView.getUint16(offset);
+      offset += 2;
+    }
+
+    this.relativeOffset += count * 2;
+    return offsets;
+  }
+
+  // Parse a list of 32 bit unsigned integers.
+  parseULongList(int? count) {
+    if (count == null) { count = this.parseULong(); }
+    var offsets = List<int>.filled(count!, 0);
+    var dataView = this.data;
+    var offset = this.offset + this.relativeOffset;
+    for (var i = 0; i < count; i++) {
+      offsets[i] = dataView.getUint32(offset);
+      offset += 4;
+    }
+
+    this.relativeOffset += count * 4;
+    return offsets;
+  }
+
+  
+  // Parse a data structure into an object
+  // Example of description: { sequenceIndex: Parser.uShort, lookupListIndex: Parser.uShort }
+  parseStruct(description) {
+    if (description is Function) {
+      // TODO js 方法是 参数长度可变 
+      print(" description: ${description.runtimeType.toString()} ");
+      String _fn = description.runtimeType.toString();
+      if(_fn.startsWith("()")) {
+        return description();
+      } else {
+        return description(this);
+      }
+      
+    } else {
+      var fields = description.keys.toList();
+      var struct = {};
+      for (var j = 0; j < fields.length; j++) {
+          var fieldName = fields[j];
+          var fieldType = description[fieldName];
+
+          String _fn = fieldType.runtimeType.toString();
+          if(_fn.startsWith("()")) {
+            struct[fieldName] = fieldType();
+          } else {
+            struct[fieldName] = fieldType(this);
+          }
+          
+      }
+      return struct;
+    }
+  }
+
+
+  // Parse a coverage table in a GSUB, GPOS or GDEF table.
+  // https://www.microsoft.com/typography/OTSPEC/chapter2.htm
+  // parser.offset must point to the start of the table containing the coverage.
+  parseCoverage() {
+    var startOffset = this.offset + this.relativeOffset;
+    var format = this.parseUShort();
+    var count = this.parseUShort();
+    if (format == 1) {
+        return {
+          "format": 1,
+          "glyphs": this.parseUShortList(count)
+        };
+    } else if (format == 2) {
+        var ranges = List<Map>.filled(count, {});
+        for (var i = 0; i < count; i++) {
+          ranges[i] = {
+            "start": this.parseUShort(),
+            "end": this.parseUShort(),
+            "index": this.parseUShort()
+          };
+        }
+        return {
+          "format": 2,
+          "ranges": ranges
+        };
+    }
+    throw('0x' + startOffset.toString(16) + ': Coverage format must be 1 or 2.');
+  }
+
+  // Parse a Class Definition Table in a GSUB, GPOS or GDEF table.
+  // https://www.microsoft.com/typography/OTSPEC/chapter2.htm
+  parseClassDef() {
+    var startOffset = this.offset + this.relativeOffset;
+    var format = this.parseUShort();
+    if (format == 1) {
+      return {
+        "format": 1,
+        "startGlyph": this.parseUShort(),
+        "classes": this.parseUShortList(null)
+      };
+    } else if (format == 2) {
+      return {
+        "format": 2,
+        "ranges": this.parseRecordList({
+          "start": Parser.uShort,
+          "end": Parser.uShort,
+          "classId": Parser.uShort
+        }, null)
+      };
+    }
+    throw('0x' + startOffset.toString(16) + ': ClassDef format must be 1 or 2.');
+  }
+
+
+
+  ///// Static methods ///////////////////////////////////
+  // These convenience methods can be used as callbacks and should be called with "this" context set to a Parser instance.
+
+  static Function list = (count, itemCallback) {
+    return (scope) {
       return scope.parseList(count, itemCallback);
     };
   };
 
-  static Function list32 = (scope, count, itemCallback) {
-    return () {
+  static Function list32 = (count, itemCallback) {
+    return (scope) {
       return scope.parseList32(count, itemCallback);
     };
   };
 
-  static Function recordList = (scope, count, recordDescription) {
-    return () {
+  static Function recordList = (count, recordDescription) {
+    return (scope) {
       return scope.parseRecordList(count, recordDescription);
     };
   };
 
-  static Function recordList32 = (scope, count, recordDescription) {
-    return () {
+  static Function recordList32 = (count, recordDescription) {
+    return (scope) {
       return scope.parseRecordList32(count, recordDescription);
     };
   };
 
-  static Function pointer = (scope, description) {
-    return () {
+  static Function pointer = (description) {
+    return (scope) {
       return scope.parsePointer(description);
     };
   };
 
-  static Function pointer32 = (scope, description) {
-    return () {
+  static Function pointer32 = (description) {
+    return (scope) {
       return scope.parsePointer32(description);
     };
   };
 
-  static Function tag = parseTag;
-  static Function byte = parseByte;
-  static Function uShort = parseUShort;
-  static Function offset16 = parseUShort;
-  static Function uShortList = parseUShortList;
-  static Function uLong = parseULong;
-  static Function offset32 = parseULong;
-  static Function uLongList = parseULongList;
-  static Function struct = parseStruct;
-  static Function coverage = parseCoverage;
-  static Function classDef = parseClassDef;
+  static Function tag = (scope) {
+    return scope.parseTag();
+  };
+  static Function byte = (scope) {
+    return scope.parseByte();
+  };
+  static Function uShort = (scope) {
+    return scope.parseUShort();
+  };
+  static Function offset16 = (scope) {
+    return scope.parseUShort();
+  };
+  static Function uShortList = (scope) {
+    return scope.parseUShortList();
+  };
+  static Function uLong = (scope) {
+    return scope.parseULong();
+  };
+  static Function offset32 = (scope) {
+    return scope.parseULong();
+  };
+  static Function uLongList = (scope) {
+    return scope.parseULongList();
+  };
+  static Function struct = (scope) {
+    return scope.parseStruct();
+  };
+  static Function coverage = (scope) {
+    return scope.parseCoverage();
+  };
+  static Function classDef = (scope) {
+    return scope.parseClassDef();
+  };
 }
 
-Function parseTag = (scope) {
-  return scope.parseString(4);
-};
-Function parseUShort = (scope) {
-  var v = scope.data.getUint16(scope.offset + scope.relativeOffset);
-  scope.relativeOffset += 2;
-  return v;
-};
-Function parseByte = (scope) {
-  var v = scope.data.getUint8(scope.offset + scope.relativeOffset);
-  scope.relativeOffset += 1;
-  return v;
-};
-Function parseUShortList = (scope, int? count) {
-  if (count == null) { count = scope.parseUShort(); }
-  var offsets = List<int>.filled(count!, 0);
-  var dataView = scope.data;
-  var offset = scope.offset + scope.relativeOffset;
-  for (var i = 0; i < count; i++) {
-    offsets[i] = dataView.getUint16(offset);
-    offset += 2;
-  }
 
-  scope.relativeOffset += count * 2;
-  return offsets;
+Function parseUShort2 = (scope) {
+  return scope.parseUShort();
 };
-Function parseULong = (scope) {
-  var v = getULong(scope.data, scope.offset + scope.relativeOffset);
-  scope.relativeOffset += 4;
-  return v;
+Function parseULong2 = (scope) {
+  return scope.parseULong();
 };
 
-// Parse a list of 32 bit unsigned integers.
-Function parseULongList = (scope, int? count) {
-  if (count == null) { count = scope.parseULong(); }
-  var offsets = List<int>.filled(count!, 0);
-  var dataView = scope.data;
-  var offset = scope.offset + scope.relativeOffset;
-  for (var i = 0; i < count; i++) {
-    offsets[i] = dataView.getUint32(offset);
-    offset += 4;
-  }
+Function getCard16 = getUShort;
+Function getCard8 = getByte;
 
-  scope.relativeOffset += count * 4;
-  return offsets;
-};
 
-// Parse a data structure into an object
-// Example of description: { sequenceIndex: Parser.uShort, lookupListIndex: Parser.uShort }
-Function parseStruct = (scope, description) {
-  if (description is Function) {
-    return description(scope);
-  } else {
-    var fields = description.keys.toList();
-    var struct = {};
-    for (var j = 0; j < fields.length; j++) {
-        var fieldName = fields[j];
-        var fieldType = description[fieldName];
-        struct[fieldName] = fieldType(scope);
-    }
-    return struct;
-  }
-};
 
-// Parse a coverage table in a GSUB, GPOS or GDEF table.
-// https://www.microsoft.com/typography/OTSPEC/chapter2.htm
-// parser.offset must point to the start of the table containing the coverage.
-Function parseCoverage = (scope) {
-  var startOffset = scope.offset + scope.relativeOffset;
-  var format = scope.parseUShort();
-  var count = scope.parseUShort();
-  if (format == 1) {
-      return {
-        "format": 1,
-        "glyphs": parseUShortList(scope, count)
-      };
-  } else if (format == 2) {
-      var ranges = List<Map>.filled(count, {});
-      for (var i = 0; i < count; i++) {
-        ranges[i] = {
-          "start": scope.parseUShort(),
-          "end": scope.parseUShort(),
-          "index": scope.parseUShort()
-        };
-      }
-      return {
-        "format": 2,
-        "ranges": ranges
-      };
-  }
-  throw('0x' + startOffset.toString(16) + ': Coverage format must be 1 or 2.');
-};
 
-// Parse a Class Definition Table in a GSUB, GPOS or GDEF table.
-// https://www.microsoft.com/typography/OTSPEC/chapter2.htm
-Function parseClassDef = (scope) {
-  var startOffset = scope.offset + scope.relativeOffset;
-  var format = scope.parseUShort();
-  if (format == 1) {
-    return {
-      "format": 1,
-      "startGlyph": scope.parseUShort(),
-      "classes": parseUShortList(scope, null)
-    };
-  } else if (format == 2) {
-    return {
-      "format": 2,
-      "ranges": scope.parseRecordList({
-        "start": Parser.uShort,
-        "end": Parser.uShort,
-        "classId": Parser.uShort
-      })
-    };
-  }
-  throw('0x' + startOffset.toString(16) + ': ClassDef format must be 1 or 2.');
-};
 
 ///// Script, Feature, Lookup lists ///////////////////////////////////////////////
 // https://www.microsoft.com/typography/OTSPEC/chapter2.htm
@@ -655,3 +730,5 @@ var langSysTable = {
     "reqFeatureIndex": Parser.uShort,
     "featureIndexes": Parser.uShortList
 };
+
+

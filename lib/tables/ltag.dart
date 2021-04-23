@@ -7,55 +7,52 @@ part of opentype_tables;
 // http://www.w3.org/International/articles/language-tags/
 // http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
 
-import check from '../check';
-import parse from '../parse';
-import table from '../table';
 
-function makeLtagTable(tags) {
-    const result = new table.Table('ltag', [
-        {name: 'version', type: 'ULONG', value: 1},
-        {name: 'flags', type: 'ULONG', value: 0},
-        {name: 'numTags', type: 'ULONG', value: tags.length}
-    ]);
+// function makeLtagTable(tags) {
+//     var result = new table.Table('ltag', [
+//         {name: 'version', type: 'ULONG', value: 1},
+//         {name: 'flags', type: 'ULONG', value: 0},
+//         {name: 'numTags', type: 'ULONG', value: tags.length}
+//     ]);
 
-    let stringPool = '';
-    const stringPoolOffset = 12 + tags.length * 4;
-    for (let i = 0; i < tags.length; ++i) {
-        let pos = stringPool.indexOf(tags[i]);
-        if (pos < 0) {
-            pos = stringPool.length;
-            stringPool += tags[i];
-        }
+//     let stringPool = '';
+//     var stringPoolOffset = 12 + tags.length * 4;
+//     for (let i = 0; i < tags.length; ++i) {
+//         let pos = stringPool.indexOf(tags[i]);
+//         if (pos < 0) {
+//             pos = stringPool.length;
+//             stringPool += tags[i];
+//         }
 
-        result.fields.push({name: 'offset ' + i, type: 'USHORT', value: stringPoolOffset + pos});
-        result.fields.push({name: 'length ' + i, type: 'USHORT', value: tags[i].length});
-    }
+//         result.fields.push({name: 'offset ' + i, type: 'USHORT', value: stringPoolOffset + pos});
+//         result.fields.push({name: 'length ' + i, type: 'USHORT', value: tags[i].length});
+//     }
 
-    result.fields.push({name: 'stringPool', type: 'CHARARRAY', value: stringPool});
-    return result;
-}
+//     result.fields.push({name: 'stringPool', type: 'CHARARRAY', value: stringPool});
+//     return result;
+// }
 
-function parseLtagTable(data, start) {
-    const p = new parse.Parser(data, start);
-    const tableVersion = p.parseULong();
-    check.argument(tableVersion === 1, 'Unsupported ltag table version.');
+parseLtagTable(data, start) {
+    var p = new Parser(data, start);
+    var tableVersion = p.parseULong();
+    argument(tableVersion == 1, 'Unsupported ltag table version.');
     // The 'ltag' specification does not define any flags; skip the field.
     p.skip('uLong', 1);
-    const numTags = p.parseULong();
+    var numTags = p.parseULong();
 
-    const tags = [];
-    for (let i = 0; i < numTags; i++) {
-        let tag = '';
-        const offset = start + p.parseUShort();
-        const length = p.parseUShort();
-        for (let j = offset; j < offset + length; ++j) {
+    var tags = [];
+    for (var i = 0; i < numTags; i++) {
+        var tag = '';
+        var offset = start + p.parseUShort();
+        var length = p.parseUShort();
+        for (var j = offset; j < offset + length; ++j) {
             tag += String.fromCharCode(data.getInt8(j));
         }
 
-        tags.push(tag);
+        tags.add(tag);
     }
 
     return tags;
 }
 
-export default { make: makeLtagTable, parse: parseLtagTable };
+// export default { make: makeLtagTable, parse: parseLtagTable };
