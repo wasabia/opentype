@@ -11,6 +11,9 @@ part of opentype_tables;
 parseLookup1(scope) {
     var start = scope.offset + scope.relativeOffset;
     var posformat = scope.parseUShort();
+
+
+
     if (posformat == 1) {
       return {
         "posFormat": 1,
@@ -24,7 +27,7 @@ parseLookup1(scope) {
         "values": scope.parseValueRecordList()
       };
     }
-    assertfn(false, '0x' + start.toString(16) + ': GPOS lookup type 1 format must be 1 or 2.');
+    assertfn(false, '0x ${start.toString()}: posformat: ${posformat} GPOS lookup type 1 format must be 1 or 2.');
 }
 
 // // https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable

@@ -240,7 +240,7 @@ class Parser {
    * itemCallback is one of the Parser methods.
    */
   parseList(count, itemCallback) {
-    if (!itemCallback) {
+    if (itemCallback == null) {
         itemCallback = count;
         count = parseUShort();
     }
@@ -252,7 +252,7 @@ class Parser {
   }
 
   parseList32(count, itemCallback) {
-    if (!itemCallback) {
+    if (itemCallback == null) {
         itemCallback = count;
         count = parseULong();
     }
@@ -426,16 +426,14 @@ class Parser {
   parseScriptList() {
       return this.parsePointer(
         Parser.recordList(
-          this, 
           {
             "tag": Parser.tag,
-            "script": Parser.pointer(this, {
+            "script": Parser.pointer({
                 "defaultLangSys": Parser.pointer(langSysTable),
-                "langSysRecords": Parser.recordList(
-                  this, 
+                "langSysRecords": Parser.recordList( 
                   {
                     "tag": Parser.tag,
-                    "langSys": Parser.pointer(this, langSysTable)
+                    "langSys": Parser.pointer(langSysTable)
                   }, 
                   null
                 )
@@ -449,26 +447,31 @@ class Parser {
   parseFeatureList() {
       return this.parsePointer(Parser.recordList({
           "tag": Parser.tag,
-          "feature": Parser.pointer(this, {
+          "feature": Parser.pointer({
               "featureParams": Parser.offset16,
               "lookupListIndexes": Parser.uShortList
           })
-      })) ?? [];
+      }, null)) ?? [];
   }
 
   parseLookupList(lookupTableParsers) {
-      return this.parsePointer(Parser.list(Parser.pointer(() {
-          var lookupType = parseUShort();
-          // argument(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
-          var lookupFlag = parseUShort();
-          var useMarkFilteringSet = lookupFlag & 0x10;
-          return {
-              "lookupType": lookupType,
-              "lookupFlag": lookupFlag,
-              "subtables": this.parseList(Parser.pointer(this, lookupTableParsers[lookupType]), null),
-              "markFilteringSet": useMarkFilteringSet ? parseUShort() : null
-          };
-      }))) ?? [];
+      return this.parsePointer(
+        Parser.list(
+          Parser.pointer(() {
+            var lookupType = parseUShort();
+            // argument(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
+            var lookupFlag = parseUShort();
+            var useMarkFilteringSet = lookupFlag & 0x10;
+            return {
+                "lookupType": lookupType,
+                "lookupFlag": lookupFlag,
+                "subtables": this.parseList(Parser.pointer(lookupTableParsers[lookupType]), null),
+                "markFilteringSet": useMarkFilteringSet ? parseUShort() : null
+            };
+          }),
+          null
+        )
+      ) ?? [];
   }
 
   parseFeatureVariationsList() {
@@ -568,8 +571,10 @@ class Parser {
           String _fn = fieldType.runtimeType.toString();
           if(_fn.startsWith("()")) {
             struct[fieldName] = fieldType();
-          } else {
+          } else if(_fn.startsWith("(dynamic)")) {
             struct[fieldName] = fieldType(this);
+          } else {
+            struct[fieldName] = fieldType(this, null);
           }
           
       }
@@ -684,8 +689,8 @@ class Parser {
   static Function offset16 = (scope) {
     return scope.parseUShort();
   };
-  static Function uShortList = (scope) {
-    return scope.parseUShortList();
+  static Function uShortList = (scope, count) {
+    return scope.parseUShortList(count);
   };
   static Function uLong = (scope) {
     return scope.parseULong();
