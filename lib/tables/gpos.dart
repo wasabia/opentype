@@ -12,8 +12,6 @@ parseLookup1(scope) {
     var start = scope.offset + scope.relativeOffset;
     var posformat = scope.parseUShort();
 
-
-
     if (posformat == 1) {
       return {
         "posFormat": 1,
@@ -34,7 +32,7 @@ parseLookup1(scope) {
 parseLookup2(scope) {
     var start = scope.offset + scope.relativeOffset;
     var posFormat = scope.parseUShort();
-    assertfn(posFormat == 1 || posFormat == 2, '0x' + start.toString(16) + ': GPOS lookup type 2 format must be 1 or 2.');
+    assertfn(posFormat == 1 || posFormat == 2, '0x' + start.toString() + ': GPOS lookup type 2 format must be 1 or 2.');
     var coverage = scope.parsePointer(Parser.coverage);
     var valueFormat1 = scope.parseUShort();
     var valueFormat2 = scope.parseUShort();
@@ -45,13 +43,21 @@ parseLookup2(scope) {
             "coverage": coverage,
             "valueFormat1": valueFormat1,
             "valueFormat2": valueFormat2,
-            "pairSets": scope.parseList(Parser.pointer(Parser.list(() {
-                return {        // pairValueRecord
-                    "secondGlyph": scope.parseUShort(),
-                    "value1": scope.parseValueRecord(valueFormat1),
-                    "value2": scope.parseValueRecord(valueFormat2)
-                };
-            })))
+            "pairSets": scope.parseList(
+              Parser.pointer(
+                Parser.list(
+                  (scope) {
+                    return {        // pairValueRecord
+                      "secondGlyph": scope.parseUShort(),
+                      "value1": scope.parseValueRecord(valueFormat1),
+                      "value2": scope.parseValueRecord(valueFormat2)
+                    };
+                  },
+                  null
+                )
+              ),
+              null
+            )
         };
     } else if (posFormat == 2) {
         var classDef1 = scope.parsePointer(Parser.classDef);

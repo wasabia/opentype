@@ -11,7 +11,7 @@ Function _searchTag = (arr, tag) {
     int imax = arr.length - 1;
     while (imin <= imax) {
         var imid = (imin + imax) >> 1;
-        var val = arr[imid].tag;
+        var val = arr[imid]["tag"];
         if (val == tag) {
             return imid;
         } else if (val < tag) {
@@ -87,7 +87,7 @@ class Layout {
    */
   getTable(bool create) {
     var layout = this.font.tables[this.tableName];
-    if (!layout && create) {
+    if (layout != null && create) {
         layout = this.font.tables[this.tableName] = this.createDefaultTable();
     }
     return layout;
@@ -100,7 +100,7 @@ class Layout {
    */
   getScriptNames() {
       var layout = this.getTable(false);
-      if (!layout) { return []; }
+      if (layout == null) { return []; }
       return layout.scripts.map((script) {
         return script.tag;
       });
@@ -114,10 +114,10 @@ class Layout {
    */
   getDefaultScriptName() {
       var layout = this.getTable(false);
-      if (!layout) { return; }
+      if (layout == null) { return; }
       var hasLatn = false;
-      for (var i = 0; i < layout.scripts.length; i++) {
-          var name = layout.scripts[i].tag;
+      for (var i = 0; i < layout["scripts"].length; i++) {
+          var name = layout["scripts"][i]["tag"];
           if (name == 'DFLT') return name;
           if (name == 'latn') hasLatn = true;
       }
@@ -133,12 +133,12 @@ class Layout {
    */
   getScriptTable(script, create) {
     var layout = this.getTable(create);
-    if (layout) {
+    if (layout != null) {
       script = script ?? 'DFLT';
-      var scripts = layout.scripts;
-      var pos = searchTag(layout.scripts, script);
+      var scripts = layout["scripts"];
+      var pos = searchTag(layout["scripts"], script);
       if (pos >= 0) {
-          return scripts[pos].script;
+          return scripts[pos]["script"];
       } else if (create) {
           var scr = {
               "tag": script,
@@ -163,19 +163,19 @@ class Layout {
    */
   getLangSysTable(script, language, bool create) {
       var scriptTable = this.getScriptTable(script, create);
-      if (scriptTable) {
-          if (!language || language == 'dflt' || language == 'DFLT') {
-              return scriptTable.defaultLangSys;
+      if (scriptTable != null) {
+          if (language == null || language == 'dflt' || language == 'DFLT') {
+              return scriptTable["defaultLangSys"];
           }
-          var pos = searchTag(scriptTable.langSysRecords, language);
+          var pos = searchTag(scriptTable["langSysRecords"], language);
           if (pos >= 0) {
-              return scriptTable.langSysRecords[pos].langSys;
+              return scriptTable["langSysRecords"][pos]["langSys"];
           } else if (create) {
               var langSysRecord = {
                   "tag": language,
                   "langSys": {"reserved": 0, "reqFeatureIndex": 0xffff, "featureIndexes": []}
               };
-              scriptTable.langSysRecords.splice(-1 - pos, 0, langSysRecord);
+              scriptTable["langSysRecords"].splice(-1 - pos, 0, langSysRecord);
               return langSysRecord["langSys"];
           }
       }
@@ -192,29 +192,29 @@ class Layout {
    */
   getFeatureTable(script, language, feature, bool create) {
       var langSysTable = this.getLangSysTable(script, language, create);
-      if (langSysTable) {
+      if (langSysTable != null) {
           var featureRecord;
-          var featIndexes = langSysTable.featureIndexes;
-          var allFeatures = this.font.tables[this.tableName].features;
+          var featIndexes = langSysTable["featureIndexes"];
+          var allFeatures = this.font.tables[this.tableName]["features"];
           // The FeatureIndex array of indices is in arbitrary order,
           // even if allFeatures is sorted alphabetically by feature tag.
           for (var i = 0; i < featIndexes.length; i++) {
               featureRecord = allFeatures[featIndexes[i]];
-              if (featureRecord.tag == feature) {
-                  return featureRecord.feature;
+              if (featureRecord["tag"] == feature) {
+                  return featureRecord["feature"];
               }
           }
           if (create) {
               var index = allFeatures.length;
               // Automatic ordering of features would require to shift feature indexes in the script list.
-              assertfn(index == 0 || feature >= allFeatures[index - 1].tag, 'Features must be added in alphabetical order.');
+              assertfn(index == 0 || feature >= allFeatures[index - 1]["tag"], 'Features must be added in alphabetical order.');
               featureRecord = {
                   "tag": feature,
                   "feature": { "params": 0, "lookupListIndexes": [] }
               };
-              allFeatures.push(featureRecord);
-              featIndexes.push(index);
-              return featureRecord.feature;
+              allFeatures.add(featureRecord);
+              featIndexes.add(index);
+              return featureRecord["feature"];
           }
       }
   }
@@ -232,14 +232,14 @@ class Layout {
   getLookupTables(script, language, feature, lookupType, bool create) {
       var featureTable = this.getFeatureTable(script, language, feature, create);
       var tables = [];
-      if (featureTable) {
+      if (featureTable != null) {
           var lookupTable;
-          var lookupListIndexes = featureTable.lookupListIndexes;
-          var allLookups = this.font.tables[this.tableName].lookups;
+          var lookupListIndexes = featureTable["lookupListIndexes"];
+          var allLookups = this.font.tables[this.tableName]["lookups"];
           // lookupListIndexes are in no particular order, so use naive search.
           for (var i = 0; i < lookupListIndexes.length; i++) {
               lookupTable = allLookups[lookupListIndexes[i]];
-              if (lookupTable.lookupType == lookupType) {
+              if (lookupTable["lookupType"] == lookupType) {
                   tables.add(lookupTable);
               }
           }

@@ -244,10 +244,15 @@ class Parser {
         itemCallback = count;
         count = parseUShort();
     }
-    var list = List<int>.filled(count, 0);
+    var list = [];
     for (var i = 0; i < count; i++) {
-        list[i] = itemCallback.call(this);
+      list.add( itemCallback.call(this) );
     }
+
+    // print(" parseList list count: ${count} ");
+    // print(list);
+
+
     return list;
   }
 
@@ -332,17 +337,17 @@ class Parser {
 
       Map<String, dynamic> valueRecord = {};
 
-      if (valueFormat & 0x0001) { valueRecord["xPlacement"] = this.parseShort(); }
-      if (valueFormat & 0x0002) { valueRecord["yPlacement"] = this.parseShort(); }
-      if (valueFormat & 0x0004) { valueRecord["xAdvance"] = this.parseShort(); }
-      if (valueFormat & 0x0008) { valueRecord["yAdvance"] = this.parseShort(); }
+      if ((valueFormat & 0x0001) != 0) { valueRecord["xPlacement"] = this.parseShort(); }
+      if ((valueFormat & 0x0002) != 0) { valueRecord["yPlacement"] = this.parseShort(); }
+      if ((valueFormat & 0x0004) != 0) { valueRecord["xAdvance"] = this.parseShort(); }
+      if ((valueFormat & 0x0008) != 0) { valueRecord["yAdvance"] = this.parseShort(); }
 
       // Device table (non-variable font) / VariationIndex table (variable font) not supported
       // https://docs.microsoft.com/fr-fr/typography/opentype/spec/chapter2#devVarIdxTbls
-      if (valueFormat & 0x0010) { valueRecord["xPlaDevice"] = null; this.parseShort(); }
-      if (valueFormat & 0x0020) { valueRecord["yPlaDevice"] = null; this.parseShort(); }
-      if (valueFormat & 0x0040) { valueRecord["xAdvDevice"] = null; this.parseShort(); }
-      if (valueFormat & 0x0080) { valueRecord["yAdvDevice"] = null; this.parseShort(); }
+      if ((valueFormat & 0x0010) != 0) { valueRecord["xPlaDevice"] = null; this.parseShort(); }
+      if ((valueFormat & 0x0020) != 0) { valueRecord["yPlaDevice"] = null; this.parseShort(); }
+      if ((valueFormat & 0x0040) != 0) { valueRecord["xAdvDevice"] = null; this.parseShort(); }
+      if ((valueFormat & 0x0080) != 0) { valueRecord["yAdvDevice"] = null; this.parseShort(); }
 
       return valueRecord;
   }
@@ -455,18 +460,24 @@ class Parser {
   }
 
   parseLookupList(lookupTableParsers) {
+    // print("parseLookupList ...offset: ${this.offset} relativeOffset: ${this.relativeOffset}  ");
       return this.parsePointer(
         Parser.list(
-          Parser.pointer(() {
-            var lookupType = parseUShort();
-            // argument(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
-            var lookupFlag = parseUShort();
-            var useMarkFilteringSet = lookupFlag & 0x10;
+          Parser.pointer((scope) {
+            // print(" parseLookupList parsePointer... offset: ${scope.offset} relativeOffset: ${scope.relativeOffset} ");
+
+            var lookupType = scope.parseUShort();
+            argument(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ${lookupType} unknown.');
+            var lookupFlag = scope.parseUShort();
+            bool useMarkFilteringSet = (lookupFlag & 0x10) != 0;
+
+            // print(" lookupType: ${lookupType} ");
+
             return {
-                "lookupType": lookupType,
-                "lookupFlag": lookupFlag,
-                "subtables": this.parseList(Parser.pointer(lookupTableParsers[lookupType]), null),
-                "markFilteringSet": useMarkFilteringSet ? parseUShort() : null
+              "lookupType": lookupType,
+              "lookupFlag": lookupFlag,
+              "subtables": scope.parseList(Parser.pointer(lookupTableParsers[lookupType]), null),
+              "markFilteringSet": useMarkFilteringSet ? scope.parseUShort() : null
             };
           }),
           null
@@ -490,10 +501,10 @@ class Parser {
 
 
   parseUShort() {
-    int _offset = this.offset + this.relativeOffset;
+    // int _offset = this.offset + this.relativeOffset;
     var v = this.data.getUint16(this.offset + this.relativeOffset);
 
-    // if(_offset > 10000000) {
+    // if(_offset > 10048176) {
     //   print(" v: ${v} offset: ${this.offset} relativeOffset: ${this.relativeOffset}  ");
     // }
 
@@ -553,14 +564,17 @@ class Parser {
   parseStruct(description) {
     if (description is Function) {
       // TODO js 方法是 参数长度可变 
-      print(" description: ${description.runtimeType.toString()} ");
+      // print(" description: ${description.runtimeType.toString()} ");
+
       String _fn = description.runtimeType.toString();
+
       if(_fn.startsWith("()")) {
         return description();
-      } else {
+      } else if(_fn.startsWith("(dynamic)")) {
         return description(this);
+      } else {
+        return description(this, null);
       }
-      
     } else {
       var fields = description.keys.toList();
       var struct = {};
@@ -643,6 +657,7 @@ class Parser {
 
   static Function list = (count, itemCallback) {
     return (scope) {
+      // print("list  offset: ${scope.offset} relativeOffset: ${scope.relativeOffset} ");
       return scope.parseList(count, itemCallback);
     };
   };

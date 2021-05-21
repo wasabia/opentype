@@ -156,7 +156,6 @@ Function parseBuffer = (Uint8List buffer, opt) {
     var tableEntries = [];
     var signature = getTag(data, 0);
 
-    print("parseBuffer signature: ${signature}  11 ${String.fromCharCodes([0, 1, 0, 0])}");
 
     if (signature == String.fromCharCodes([0, 1, 0, 0]) || signature == 'true' || signature == 'typ1') {
          print("parseBuffer signature is truetype");
@@ -199,7 +198,7 @@ Function parseBuffer = (Uint8List buffer, opt) {
     for (var i = 0; i < numTables; i += 1) {
         Map<String, dynamic> tableEntry = tableEntries[i];
         Map<String, dynamic> table;
-        print("numTables: ${i} ${tableEntry}  ");
+       
         switch (tableEntry["tag"]) {
             case 'cmap':
                 table = uncompressTable(data, tableEntry);

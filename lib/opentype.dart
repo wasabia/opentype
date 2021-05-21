@@ -13,8 +13,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 
-// import './tables/index.dart';
-
 part './layout.dart';
 part './check.dart';
 // part './util.dart';
