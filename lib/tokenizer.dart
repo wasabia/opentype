@@ -1,3 +1,5 @@
+part of opentype;
+
 /**
  * Converts a string into a list of tokens.
  */
@@ -25,7 +27,7 @@ class Token {
     this.state[key] = value;
     this.activeState = { "key": key, "value": this.state[key] };
     return this.activeState;
-  };
+  }
 
   getState(stateId) {
     return this.state[stateId] ?? null;
@@ -40,6 +42,10 @@ class Token {
  * @param {string} contextName owner context name
  */
 class ContextRange {
+
+  late String contextName;
+  late int startIndex;
+  late int endOffset;
 
   ContextRange(startIndex, endOffset, contextName) {
     this.contextName = contextName;
@@ -56,6 +62,11 @@ class ContextRange {
  * @param {function} checkEnd a predicate function the indicates a context's end
  */
 class ContextChecker {
+  late String contextName;
+  late Function checkStart;
+  late Function checkEnd;
+  late dynamic openRange;
+  late dynamic ranges;
 
   ContextChecker(contextName, checkStart, checkEnd) {
     this.contextName = contextName;
@@ -81,6 +92,13 @@ class ContextChecker {
  */
 class ContextParams {
 
+  late List context;
+  late int index;
+  late int length;
+  late dynamic current;
+  late dynamic backtrack;
+  late dynamic lookahead;
+
   ContextParams(context, currentIndex) {
     this.context = context;
     this.index = currentIndex;
@@ -98,6 +116,9 @@ class ContextParams {
  */
 class Event {
 
+  late String eventId;
+  late dynamic subscribers;
+
   Event(eventId) {
     this.eventId = eventId;
     this.subscribers = [];
@@ -106,56 +127,65 @@ class Event {
 }
 
 /**
- * Initialize a core events and auto subscribe required event handlers
- * @param {any} events an object that enlists core events handlers
- */
-Function initializeCoreEvents = (events) {
-    var coreEvents = [
-        'start', 'end', 'next', 'newToken', 'contextStart',
-        'contextEnd', 'insertToken', 'removeToken', 'removeRange',
-        'replaceToken', 'replaceRange', 'composeRUD', 'updateContextsRanges'
-    ];
-
-    coreEvents.forEach((eventId) {
-        Object.defineProperty(this.events, eventId, {
-            value: new Event(eventId)
-        });
-    });
-
-    if (!!events) {
-        coreEvents.forEach(eventId => {
-            const event = events[eventId];
-            if (typeof event === 'function') {
-                this.events[eventId].subscribe(event);
-            }
-        });
-    }
-    const requiresContextUpdate = [
-        'insertToken', 'removeToken', 'removeRange',
-        'replaceToken', 'replaceRange', 'composeRUD'
-    ];
-    requiresContextUpdate.forEach(eventId => {
-        this.events[eventId].subscribe(
-            this.updateContextsRanges
-        );
-    });
-};
-
-/**
  * Converts a string into a list of tokens
  * @param {any} events tokenizer core events
  */
 class Tokenizer {
 
-  Tokenizer(events) {
+  late List tokens;
+  late dynamic registeredContexts;
+  late dynamic contextCheckers;
+  late dynamic events;
+  late dynamic registeredModifiers;
+
+
+  Tokenizer() {
     this.tokens = [];
     this.registeredContexts = {};
     this.contextCheckers = [];
     this.events = {};
     this.registeredModifiers = [];
 
-    initializeCoreEvents.call(this, events);
+    // initializeCoreEvents.call(this, events);
   }
+
+
+  /**
+   * Initialize a core events and auto subscribe required event handlers
+   * @param {any} events an object that enlists core events handlers
+   */
+  // initializeCoreEvents(events) {
+  //     var coreEvents = [
+  //         'start', 'end', 'next', 'newToken', 'contextStart',
+  //         'contextEnd', 'insertToken', 'removeToken', 'removeRange',
+  //         'replaceToken', 'replaceRange', 'composeRUD', 'updateContextsRanges'
+  //     ];
+
+  //     coreEvents.forEach((eventId) {
+  //         Object.defineProperty(this.events, eventId, {
+  //             value: new Event(eventId)
+  //         });
+  //     });
+
+  //     if (!!events) {
+  //         coreEvents.forEach((eventId) {
+  //             var event = events[eventId];
+  //             if (typeof event == 'function') {
+  //                 this.events[eventId].subscribe(event);
+  //             }
+  //         });
+  //     }
+  //     var requiresContextUpdate = [
+  //         'insertToken', 'removeToken', 'removeRange',
+  //         'replaceToken', 'replaceRange', 'composeRUD'
+  //     ];
+  //     requiresContextUpdate.forEach((eventId) {
+  //         this.events[eventId].subscribe(
+  //           this.updateContextsRanges
+  //         );
+  //     });
+  // }
+
   
   /**
    * Checks if an index exists in the tokens list.
@@ -168,25 +198,135 @@ class Tokenizer {
   /**
    * Compose and apply a list of operations (replace, update, delete)
    * @param {array} RUDs replace, update and delete operations
-   * TODO: Perf. Optimization (lengthBefore === lengthAfter ? dispatch once)
+   * TODO: Perf. Optimization (lengthBefore == lengthAfter ? dispatch once)
    */
-  composeRUD (RUDs) {
-      var silent = true;
-      var state = RUDs.map((RUD) (
-          this[RUD[0]].apply(this, RUD.slice(1).concat(silent))
-      ));
-      var hasFAILObject = (obj) (
-          typeof obj == 'object' &&
-          obj.hasOwnProperty('FAIL')
-      );
-      if (state.every(hasFAILObject)) {
-          return {
-              "FAIL": "composeRUD: one or more operations hasn't completed successfully",
-              "report": state.filter(hasFAILObject)
-          };
-      }
-      this.dispatch('composeRUD', [state.filter(op => !hasFAILObject(op))]);
+  composeRUD (ruds) {
+    var silent = true;
+    var state = ruds.map((rud) (
+      this[rud[0]].apply(this, rud.slice(1).concat(silent))
+    ));
+    var hasFAILObject = (obj) (
+        typeof obj == 'object' &&
+        obj.hasOwnProperty('FAIL')
+    );
+    if (state.every(hasFAILObject)) {
+        return {
+            "FAIL": "composeRUD: one or more operations hasn't completed successfully",
+            "report": state.filter(hasFAILObject)
+        };
+    }
+    this.dispatch('composeRUD', [state.filter(op => !hasFAILObject(op))]);
   }
+
+
+  /**
+   * Replace a range of tokens with a list of tokens
+   * @param {number} startIndex range start index
+   * @param {number} offset range offset
+   * @param {token} tokens a list of tokens to replace
+   * @param {boolean} silent dispatch events and update context ranges
+   */
+  replaceRange(startIndex, offset, tokens, silent) {
+    offset = offset != null ? offset : this.tokens.length;
+    var isTokenType = tokens.every(token => token instanceof Token);
+    if (!isNaN(startIndex) && this.inboundIndex(startIndex) && isTokenType) {
+        var replaced = this.tokens.splice.apply(
+            this.tokens, [startIndex, offset].concat(tokens)
+        );
+        if (!silent) this.dispatch('replaceToken', [startIndex, offset, tokens]);
+        return [replaced, tokens];
+    } else {
+        return { "FAIL": 'replaceRange: invalid tokens or startIndex.' };
+    }
+  }
+
+  /**
+   * Replace a token with another token
+   * @param {number} index token index
+   * @param {token} token a token to replace
+   * @param {boolean} silent dispatch events and update context ranges
+   */
+  replaceToken(index, token, silent) {
+    if (!isNaN(index) && this.inboundIndex(index) && token instanceof Token) {
+        var replaced = this.tokens.splice(index, 1, token);
+        if (!silent) this.dispatch('replaceToken', [index, token]);
+        return [replaced[0], token];
+    } else {
+        return { "FAIL": 'replaceToken: invalid token or index.' };
+    }
+  }
+
+  /**
+   * Removes a range of tokens
+   * @param {number} startIndex range start index
+   * @param {number} offset range offset
+   * @param {boolean} silent dispatch events and update context ranges
+   */
+  removeRange(startIndex, offset, silent) {
+    offset = !isNaN(offset) ? offset : this.tokens.length;
+    var tokens = this.tokens.splice(startIndex, offset);
+    if (!silent) this.dispatch('removeRange', [tokens, startIndex, offset]);
+    return tokens;
+  }
+
+  /**
+   * Remove a token at a certain index
+   * @param {number} index token index
+   * @param {boolean} silent dispatch events and update context ranges
+   */
+  removeToken(index, silent) {
+    if (!isNaN(index) && this.inboundIndex(index)) {
+      var token = this.tokens.splice(index, 1);
+      if (!silent) this.dispatch('removeToken', [token, index]);
+      return token;
+    } else {
+      return { FAIL: 'removeToken: invalid token index.' };
+    }
+  }
+
+  /**
+   * Insert a list of tokens at a certain index
+   * @param {array} tokens a list of tokens to insert
+   * @param {number} index insert the list of tokens at index
+   * @param {boolean} silent dispatch events and update context ranges
+   */
+  insertToken(tokens, index, silent) {
+      var tokenType = tokens.every(
+          token => token instanceof Token
+      );
+      if (tokenType) {
+          this.tokens.splice.apply(
+              this.tokens, [index, 0].concat(tokens)
+          );
+          if (!silent) this.dispatch('insertToken', [tokens, index]);
+          return tokens;
+      } else {
+          return { FAIL: 'insertToken: invalid token(s).' };
+      }
+  }
+
+  /**
+   * A state modifier that is called on 'newToken' event
+   * @param {string} modifierId state modifier id
+   * @param {function} condition a predicate function that returns true or false
+   * @param {function} modifier a function to update token state
+   */
+  registerModifier(modifierId, condition, modifier) {
+      this.events.newToken.subscribe(function(token, contextParams) {
+          var conditionParams = [token, contextParams];
+          var canApplyModifier = (
+              condition == null ||
+              condition.apply(this, conditionParams) == true
+          );
+          var modifierParams = [token, contextParams];
+          if (canApplyModifier) {
+              var newStateValue = modifier.apply(this, modifierParams);
+              token.setState(modifierId, newStateValue);
+          }
+      });
+      this.registeredModifiers.push(modifierId);
+  }
+
 
 }
 
@@ -195,119 +335,11 @@ class Tokenizer {
 
 
 /**
- * Replace a range of tokens with a list of tokens
- * @param {number} startIndex range start index
- * @param {number} offset range offset
- * @param {token} tokens a list of tokens to replace
- * @param {boolean} silent dispatch events and update context ranges
- */
-Tokenizer.prototype.replaceRange = function (startIndex, offset, tokens, silent) {
-    offset = offset !== null ? offset : this.tokens.length;
-    const isTokenType = tokens.every(token => token instanceof Token);
-    if (!isNaN(startIndex) && this.inboundIndex(startIndex) && isTokenType) {
-        const replaced = this.tokens.splice.apply(
-            this.tokens, [startIndex, offset].concat(tokens)
-        );
-        if (!silent) this.dispatch('replaceToken', [startIndex, offset, tokens]);
-        return [replaced, tokens];
-    } else {
-        return { FAIL: 'replaceRange: invalid tokens or startIndex.' };
-    }
-};
-
-/**
- * Replace a token with another token
- * @param {number} index token index
- * @param {token} token a token to replace
- * @param {boolean} silent dispatch events and update context ranges
- */
-Tokenizer.prototype.replaceToken = function (index, token, silent) {
-    if (!isNaN(index) && this.inboundIndex(index) && token instanceof Token) {
-        const replaced = this.tokens.splice(index, 1, token);
-        if (!silent) this.dispatch('replaceToken', [index, token]);
-        return [replaced[0], token];
-    } else {
-        return { FAIL: 'replaceToken: invalid token or index.' };
-    }
-};
-
-/**
- * Removes a range of tokens
- * @param {number} startIndex range start index
- * @param {number} offset range offset
- * @param {boolean} silent dispatch events and update context ranges
- */
-Tokenizer.prototype.removeRange = function(startIndex, offset, silent) {
-    offset = !isNaN(offset) ? offset : this.tokens.length;
-    const tokens = this.tokens.splice(startIndex, offset);
-    if (!silent) this.dispatch('removeRange', [tokens, startIndex, offset]);
-    return tokens;
-};
-
-/**
- * Remove a token at a certain index
- * @param {number} index token index
- * @param {boolean} silent dispatch events and update context ranges
- */
-Tokenizer.prototype.removeToken = function(index, silent) {
-    if (!isNaN(index) && this.inboundIndex(index)) {
-        const token = this.tokens.splice(index, 1);
-        if (!silent) this.dispatch('removeToken', [token, index]);
-        return token;
-    } else {
-        return { FAIL: 'removeToken: invalid token index.' };
-    }
-};
-
-/**
- * Insert a list of tokens at a certain index
- * @param {array} tokens a list of tokens to insert
- * @param {number} index insert the list of tokens at index
- * @param {boolean} silent dispatch events and update context ranges
- */
-Tokenizer.prototype.insertToken = function (tokens, index, silent) {
-    const tokenType = tokens.every(
-        token => token instanceof Token
-    );
-    if (tokenType) {
-        this.tokens.splice.apply(
-            this.tokens, [index, 0].concat(tokens)
-        );
-        if (!silent) this.dispatch('insertToken', [tokens, index]);
-        return tokens;
-    } else {
-        return { FAIL: 'insertToken: invalid token(s).' };
-    }
-};
-
-/**
- * A state modifier that is called on 'newToken' event
- * @param {string} modifierId state modifier id
- * @param {function} condition a predicate function that returns true or false
- * @param {function} modifier a function to update token state
- */
-Tokenizer.prototype.registerModifier = function(modifierId, condition, modifier) {
-    this.events.newToken.subscribe(function(token, contextParams) {
-        const conditionParams = [token, contextParams];
-        const canApplyModifier = (
-            condition === null ||
-            condition.apply(this, conditionParams) === true
-        );
-        const modifierParams = [token, contextParams];
-        if (canApplyModifier) {
-            let newStateValue = modifier.apply(this, modifierParams);
-            token.setState(modifierId, newStateValue);
-        }
-    });
-    this.registeredModifiers.push(modifierId);
-};
-
-/**
  * Subscribe a handler to an event
  * @param {function} eventHandler an event handler function
  */
 Event.prototype.subscribe = function (eventHandler) {
-    if (typeof eventHandler === 'function') {
+    if (typeof eventHandler == 'function') {
         return ((this.subscribers.push(eventHandler)) - 1);
     } else {
         return { FAIL: `invalid '${this.eventId}' event handler`};
@@ -342,7 +374,7 @@ ContextParams.prototype.setCurrentIndex = function(index) {
  */
 ContextParams.prototype.get = function (offset) {
     switch (true) {
-        case (offset === 0):
+        case (offset == 0):
             return this.current;
         case (offset < 0 && Math.abs(offset) <= this.backtrack.length):
             return this.backtrack.slice(offset)[0];
@@ -388,7 +420,7 @@ Tokenizer.prototype.getContext = function (contextName) {
  * @param {function} eventHandler a function to be invoked on event
  */
 Tokenizer.prototype.on = function(eventName, eventHandler) {
-    const event = this.events[eventName];
+    var event = this.events[eventName];
     if (!!event) {
         return event.subscribe(eventHandler);
     } else {
@@ -402,7 +434,7 @@ Tokenizer.prototype.on = function(eventName, eventHandler) {
  * @param {any} args event handler arguments
  */
 Tokenizer.prototype.dispatch = function(eventName, args) {
-    const event = this.events[eventName];
+    var event = this.events[eventName];
     if (event instanceof Event) {
         event.subscribers.forEach(subscriber => {
             subscriber.apply(this, args || []);
@@ -430,7 +462,7 @@ Tokenizer.prototype.registerContextChecker = function(contextName, contextStartC
         FAIL:
         `missing context end check.`
     };
-    const contextCheckers = new ContextChecker(
+    var contextCheckers = new ContextChecker(
         contextName, contextStartCheck, contextEndCheck
     );
     this.registeredContexts[contextName] = contextCheckers;
@@ -443,7 +475,7 @@ Tokenizer.prototype.registerContextChecker = function(contextName, contextStartC
  * @param {contextRange} range a context range
  */
 Tokenizer.prototype.getRangeTokens = function(range) {
-    const endIndex = range.startIndex + range.endOffset;
+    var endIndex = range.startIndex + range.endOffset;
     return [].concat(
         this.tokens
             .slice(range.startIndex, endIndex)
@@ -455,7 +487,7 @@ Tokenizer.prototype.getRangeTokens = function(range) {
  * @param {string} contextName context name
  */
 Tokenizer.prototype.getContextRanges = function(contextName) {
-    const context = this.getContext(contextName);
+    var context = this.getContext(contextName);
     if (!!context) {
         return context.ranges;
     } else {
@@ -467,10 +499,10 @@ Tokenizer.prototype.getContextRanges = function(contextName) {
  * Resets context ranges to run context update
  */
 Tokenizer.prototype.resetContextsRanges = function () {
-    const registeredContexts = this.registeredContexts;
-    for (const contextName in registeredContexts) {
+    var registeredContexts = this.registeredContexts;
+    for (var contextName in registeredContexts) {
         if (registeredContexts.hasOwnProperty(contextName)) {
-            const context = registeredContexts[contextName];
+            var context = registeredContexts[contextName];
             context.ranges = [];
         }
     }
@@ -481,9 +513,9 @@ Tokenizer.prototype.resetContextsRanges = function () {
  */
 Tokenizer.prototype.updateContextsRanges = function () {
     this.resetContextsRanges();
-    const chars = this.tokens.map(token => token.char);
+    var chars = this.tokens.map(token => token.char);
     for (let i = 0; i < chars.length; i++) {
-        const contextParams = new ContextParams(chars, i);
+        var contextParams = new ContextParams(chars, i);
         this.runContextCheck(contextParams);
     }
     this.dispatch('updateContextsRanges', [this.registeredContexts]);
@@ -495,9 +527,9 @@ Tokenizer.prototype.updateContextsRanges = function () {
  * @param {string} contextName context name
  */
 Tokenizer.prototype.setEndOffset = function (offset, contextName) {
-    const startIndex = this.getContext(contextName).openRange.startIndex;
+    var startIndex = this.getContext(contextName).openRange.startIndex;
     let range = new ContextRange(startIndex, offset, contextName);
-    const ranges = this.getContext(contextName).ranges;
+    var ranges = this.getContext(contextName).ranges;
     range.rangeId = `${contextName}.${ranges.length}`;
     ranges.push(range);
     this.getContext(contextName).openRange = null;
@@ -509,7 +541,7 @@ Tokenizer.prototype.setEndOffset = function (offset, contextName) {
  * @param {contextParams} contextParams current context params
  */
 Tokenizer.prototype.runContextCheck = function(contextParams) {
-    const index = contextParams.index;
+    var index = contextParams.index;
     this.contextCheckers.forEach(contextChecker => {
         let contextName = contextChecker.contextName;
         let openRange = this.getContext(contextName).openRange;
@@ -519,8 +551,8 @@ Tokenizer.prototype.runContextCheck = function(contextParams) {
             this.dispatch('contextStart', [contextName, index]);
         }
         if (!!openRange && contextChecker.checkEnd(contextParams)) {
-            const offset = (index - openRange.startIndex) + 1;
-            const range = this.setEndOffset(offset, contextName);
+            var offset = (index - openRange.startIndex) + 1;
+            var range = this.setEndOffset(offset, contextName);
             this.dispatch('contextEnd', [contextName, range]);
         }
     });
@@ -536,8 +568,8 @@ Tokenizer.prototype.tokenize = function (text) {
     let chars = Array.from(text);
     this.dispatch('start');
     for (let i = 0; i < chars.length; i++) {
-        const char = chars[i];
-        const contextParams = new ContextParams(chars, i);
+        var char = chars[i];
+        var contextParams = new ContextParams(chars, i);
         this.dispatch('next', [contextParams]);
         this.runContextCheck(contextParams);
         let token = new Token(char);

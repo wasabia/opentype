@@ -37,11 +37,11 @@ part of opentype_tables;
 calcCFFSubroutineBias(subrs) {
   var bias;
   if (subrs.length < 1240) {
-      bias = 107;
+    bias = 107;
   } else if (subrs.length < 33900) {
-      bias = 1131;
+    bias = 1131;
   } else {
-      bias = 32768;
+    bias = 32768;
   }
 
   return bias;
@@ -50,208 +50,238 @@ calcCFFSubroutineBias(subrs) {
 // Parse a `CFF` INDEX array.
 // An index array consists of a list of offsets, then a list of objects at those offsets.
 parseCFFIndex(data, start, Function? conversionFn) {
-    var offsets = [];
-    var objects = [];
-    var count = getCard16(data, start);
-    var objectOffset;
-    var endOffset;
-    if (count != 0) {
-        var offsetSize = getByte(data, start + 2);
-        objectOffset = start + ((count + 1) * offsetSize) + 2;
-        var pos = start + 3;
-        for (var i = 0; i < count + 1; i += 1) {
-            offsets.add(getOffset(data, pos, offsetSize));
-            pos += offsetSize;
-        }
-
-        // The total size of the index array is 4 header bytes + the value of the last offset.
-        endOffset = objectOffset + offsets[count];
-    } else {
-        endOffset = start + 2;
+  var offsets = [];
+  var objects = [];
+  var count = getCard16(data, start);
+  var objectOffset;
+  var endOffset;
+  if (count != 0) {
+    var offsetSize = getByte(data, start + 2);
+    objectOffset = start + ((count + 1) * offsetSize) + 2;
+    var pos = start + 3;
+    for (var i = 0; i < count + 1; i += 1) {
+      offsets.add(getOffset(data, pos, offsetSize));
+      pos += offsetSize;
     }
 
-    for (var i = 0; i < offsets.length - 1; i += 1) {
-        var value = getBytes(data, objectOffset + offsets[i], objectOffset + offsets[i + 1]);
-        if (conversionFn != null) {
-            value = conversionFn(value);
-        }
+    // The total size of the index array is 4 header bytes + the value of the last offset.
+    endOffset = objectOffset + offsets[count];
+  } else {
+    endOffset = start + 2;
+  }
 
-        objects.add(value);
+  for (var i = 0; i < offsets.length - 1; i += 1) {
+    var value = getBytes(
+        data, objectOffset + offsets[i], objectOffset + offsets[i + 1]);
+    if (conversionFn != null) {
+      value = conversionFn(value);
     }
 
-    return {"objects": objects, "startOffset": start, "endOffset": endOffset};
+    objects.add(value);
+  }
+
+  return {"objects": objects, "startOffset": start, "endOffset": endOffset};
 }
 
 parseCFFIndexLowMemory(data, start) {
-    var offsets = [];
-    var count = getCard16(data, start);
-    var objectOffset;
-    var endOffset;
-    if (count != 0) {
-        var offsetSize = getByte(data, start + 2);
-        objectOffset = start + ((count + 1) * offsetSize) + 2;
-        var pos = start + 3;
-        for (var i = 0; i < count + 1; i += 1) {
-            offsets.add(getOffset(data, pos, offsetSize));
-            pos += offsetSize;
-        }
-
-        // The total size of the index array is 4 header bytes + the value of the last offset.
-        endOffset = objectOffset + offsets[count];
-    } else {
-        endOffset = start + 2;
+  var offsets = [];
+  var count = getCard16(data, start);
+  var objectOffset;
+  var endOffset;
+  if (count != 0) {
+    var offsetSize = getByte(data, start + 2);
+    objectOffset = start + ((count + 1) * offsetSize) + 2;
+    var pos = start + 3;
+    for (var i = 0; i < count + 1; i += 1) {
+      offsets.add(getOffset(data, pos, offsetSize));
+      pos += offsetSize;
     }
 
-    return {"offsets": offsets, "startOffset": start, "endOffset": endOffset};
+    // The total size of the index array is 4 header bytes + the value of the last offset.
+    endOffset = objectOffset + offsets[count];
+  } else {
+    endOffset = start + 2;
+  }
+
+  return {"offsets": offsets, "startOffset": start, "endOffset": endOffset};
 }
 
 getCffIndexObject(i, offsets, data, start, Function? conversionFn) {
-    var count = getCard16(data, start);
-    var objectOffset = 0;
-    if (count != 0) {
-        var offsetSize = getByte(data, start + 2);
-        objectOffset = start + ((count + 1) * offsetSize) + 2;
-    }
+  var count = getCard16(data, start);
+  var objectOffset = 0;
+  if (count != 0) {
+    var offsetSize = getByte(data, start + 2);
+    objectOffset = start + ((count + 1) * offsetSize) + 2;
+  }
 
-    var value = getBytes(data, objectOffset + offsets[i], objectOffset + offsets[i + 1]);
-    if (conversionFn != null) {
-        value = conversionFn(value);
-    }
-    return value;
+  var value =
+      getBytes(data, objectOffset + offsets[i], objectOffset + offsets[i + 1]);
+  if (conversionFn != null) {
+    value = conversionFn(value);
+  }
+  return value;
 }
 
 // Parse a `CFF` DICT real value.
 parseFloatOperand(parser) {
-    var s = '';
-    var eof = 15;
-    var lookup = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'E', 'E-', null, '-'];
-    while (true) {
-        var b = parser.parseByte();
-        var n1 = b >> 4;
-        var n2 = b & 15;
+  var s = '';
+  var eof = 15;
+  var lookup = [
+    '0',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '.',
+    'E',
+    'E-',
+    null,
+    '-'
+  ];
+  while (true) {
+    var b = parser.parseByte();
+    var n1 = b >> 4;
+    var n2 = b & 15;
 
-        if (n1 == eof) {
-            break;
-        }
-
-        s += lookup[n1]!;
-
-        if (n2 == eof) {
-            break;
-        }
-
-        s += lookup[n2]!;
+    if (n1 == eof) {
+      break;
     }
 
-    print(" cff.dart  parseFloatOperand s: ${s} todo debug ");
+    s += lookup[n1]!;
 
-    return double.parse(s);
+    if (n2 == eof) {
+      break;
+    }
+
+    s += lookup[n2]!;
+  }
+
+  print(" cff.dart  parseFloatOperand s: ${s} todo debug ");
+
+  return double.parse(s);
 }
 
 // Parse a `CFF` DICT operand.
 parseOperand(parser, b0) {
-    var b1;
-    var b2;
-    var b3;
-    var b4;
-    if (b0 == 28) {
-        b1 = parser.parseByte();
-        b2 = parser.parseByte();
-        return b1 << 8 | b2;
-    }
+  var b1;
+  var b2;
+  var b3;
+  var b4;
+  if (b0 == 28) {
+    b1 = parser.parseByte();
+    b2 = parser.parseByte();
+    return b1 << 8 | b2;
+  }
 
-    if (b0 == 29) {
-        b1 = parser.parseByte();
-        b2 = parser.parseByte();
-        b3 = parser.parseByte();
-        b4 = parser.parseByte();
-        return b1 << 24 | b2 << 16 | b3 << 8 | b4;
-    }
+  if (b0 == 29) {
+    b1 = parser.parseByte();
+    b2 = parser.parseByte();
+    b3 = parser.parseByte();
+    b4 = parser.parseByte();
+    return b1 << 24 | b2 << 16 | b3 << 8 | b4;
+  }
 
-    if (b0 == 30) {
-        return parseFloatOperand(parser);
-    }
+  if (b0 == 30) {
+    return parseFloatOperand(parser);
+  }
 
-    if (b0 >= 32 && b0 <= 246) {
-        return b0 - 139;
-    }
+  if (b0 >= 32 && b0 <= 246) {
+    return b0 - 139;
+  }
 
-    if (b0 >= 247 && b0 <= 250) {
-        b1 = parser.parseByte();
-        return (b0 - 247) * 256 + b1 + 108;
-    }
+  if (b0 >= 247 && b0 <= 250) {
+    b1 = parser.parseByte();
+    return (b0 - 247) * 256 + b1 + 108;
+  }
 
-    if (b0 >= 251 && b0 <= 254) {
-        b1 = parser.parseByte();
-        return -(b0 - 251) * 256 - b1 - 108;
-    }
+  if (b0 >= 251 && b0 <= 254) {
+    b1 = parser.parseByte();
+    return -(b0 - 251) * 256 - b1 - 108;
+  }
 
-    throw('Invalid b0 ' + b0);
+  throw ('Invalid b0 ' + b0);
 }
 
 // Convert the entries returned by `parseDict` to a proper dictionary.
 // If a value is a list of one, it is unpacked.
 entriesToObject(entries) {
-    var o = {};
-    for (var i = 0; i < entries.length; i += 1) {
-        var key = entries[i][0];
-        var values = entries[i][1];
-        var value;
-        if (values.length == 1) {
-            value = values[0];
-        } else {
-            value = values;
-        }
-
-        if ( o.keys.toList().indexOf(key) >= 0 && o[key] != null ) {
-            throw('Object ${o} already has key ' + key);
-        }
-
-        o[key] = value;
+  var o = {};
+  for (var i = 0; i < entries.length; i += 1) {
+    var key = entries[i][0];
+    var values = entries[i][1];
+    var value;
+    if (values.length == 1) {
+      value = values[0];
+    } else {
+      value = values;
     }
 
-    return o;
+    if (o.keys.toList().indexOf(key) >= 0 && o[key] != null) {
+      throw ('Object ${o} already has key ' + key);
+    }
+
+    o[key] = value;
+  }
+
+  return o;
 }
 
 // Parse a `CFF` DICT object.
 // A dictionary contains key-value pairs in a compact tokenized format.
 parseCFFDict(data, start, size) {
-    start = start != null ? start : 0;
-    var parser = Parser(data, start);
-    var entries = [];
-    var operands = [];
-    size = size != null ? size : data.length;
+  start = start != null ? start : 0;
+  var parser = Parser(data, start);
+  var entries = [];
+  var operands = [];
+  size = size != null ? size : data.length;
 
-    while (parser.relativeOffset < size) {
-        var op = parser.parseByte();
+  while (parser.relativeOffset < size) {
+    var op = parser.parseByte();
 
-        // The first byte for each dict item distinguishes between operator (key) and operand (value).
-        // Values <= 21 are operators.
-        if (op <= 21) {
-            // Two-byte operators have an initial escape byte of 12.
-            if (op == 12) {
-                op = 1200 + parser.parseByte();
-            }
+    // The first byte for each dict item distinguishes between operator (key) and operand (value).
+    // Values <= 21 are operators.
+    if (op <= 21) {
+      // Two-byte operators have an initial escape byte of 12.
+      if (op == 12) {
+        op = 1200 + parser.parseByte();
+      }
 
-            entries.add([op, operands]);
-            operands = [];
-        } else {
-            // Since the operands (values) come before the operators (keys), we store all operands in a list
-            // until we encounter an operator.
-            operands.add(parseOperand(parser, op));
-        }
+      entries.add([op, operands]);
+      operands = [];
+    } else {
+      // Since the operands (values) come before the operators (keys), we store all operands in a list
+      // until we encounter an operator.
+      operands.add(parseOperand(parser, op));
     }
+  }
 
-    return entriesToObject(entries);
+  return entriesToObject(entries);
 }
 
 // Given a String Index (SID), return the value of the string.
 // Strings below index 392 are standard CFF strings and are not encoded in the font.
 getCFFString(strings, index) {
+
+  if (index == null) {
+    return null;
+  }
+
   if (index <= 390) {
-      index = cffStandardStrings[index];
+    index = cffStandardStrings[index];
   } else {
-      index = strings[index - 391];
+    int _len = strings.length;
+    int _idx = index - 391;
+
+    if(_idx >= _len) {
+      return null;
+    }
+
+    index = strings[_idx];
   }
 
   return index;
@@ -259,105 +289,121 @@ getCFFString(strings, index) {
 
 // Interpret a dictionary and return a new dictionary with readable keys and values for missing entries.
 // This function takes `meta` which is a list of objects containing `operand`, `name` and `default`.
-interpretDict(dict, meta, strings) {
-    var newDict = {};
-    var value;
+Map<String, dynamic> interpretDict(dict, meta, strings) {
+  Map<String, dynamic> newDict = {};
+  var value;
 
-    // Because we also want to include missing values, we start out from the meta list
-    // and lookup values in the dict.
-    for (var i = 0; i < meta.length; i += 1) {
-        var m = meta[i];
+  // Because we also want to include missing values, we start out from the meta list
+  // and lookup values in the dict.
+  for (var i = 0; i < meta.length; i += 1) {
+    Map<String, dynamic> m = meta[i];
 
-        if (m.type is List) {
-            var values = [];
-            values.length = m.type.length;
-            for (var j = 0; j < m.type.length; j++) {
-                value = dict[m.op] != null ? dict[m.op][j] : null;
-                if (value == null) {
-                    value = m.value != null && m.value[j] != null ? m.value[j] : null;
-                }
-                if (m.type[j] == 'SID') {
-                    value = getCFFString(strings, value);
-                }
-                values[j] = value;
-            }
-            newDict[m.name] = values;
-        } else {
-            value = dict[m.op];
-            if (value == null) {
-                value = m.value != null ? m.value : null;
-            }
-
-            if (m.type == 'SID') {
-                value = getCFFString(strings, value);
-            }
-            newDict[m.name] = value;
+    if (m["type"] is List) {
+      var values = [];
+      values.length = m["type"].length;
+      for (var j = 0; j < m["type"].length; j++) {
+        value = dict[m["op"]] != null ? dict[m["op"]][j] : null;
+        if (value == null) {
+          value = m["value"] != null && m["value"][j] != null
+              ? m["value"][j]
+              : null;
         }
-    }
+        if (m["type"][j] == 'SID') {
+          value = getCFFString(strings, value);
+        }
+        values[j] = value;
+      }
+      newDict[m["name"]] = values;
+    } else {
+      value = dict[m["op"]];
+      if (value == null) {
+        value = m["value"] != null ? m["value"] : null;
+      }
 
-    return newDict;
+      if (m["type"] == 'SID') {
+        value = getCFFString(strings, value);
+      }
+      newDict[m["name"]] = value;
+    }
+  }
+
+  return newDict;
 }
 
 // Parse the CFF header.
 Map<String, dynamic> parseCFFHeader(data, start) {
-    Map<String, dynamic> header = {};
-    header["formatMajor"] = getCard8(data, start);
-    header["formatMinor"] = getCard8(data, start + 1);
-    header["size"] = getCard8(data, start + 2);
-    header["offsetSize"] = getCard8(data, start + 3);
-    header["startOffset"] = start;
-    header["endOffset"] = start + 4;
-    return header;
+  Map<String, dynamic> header = {};
+  header["formatMajor"] = getCard8(data, start);
+  header["formatMinor"] = getCard8(data, start + 1);
+  header["size"] = getCard8(data, start + 2);
+  header["offsetSize"] = getCard8(data, start + 3);
+  header["startOffset"] = start;
+  header["endOffset"] = start + 4;
+  return header;
 }
 
 var TOP_DICT_META = [
-    {"name": 'version', "op": 0, "type": 'SID'},
-    {"name": 'notice', "op": 1, "type": 'SID'},
-    {"name": 'copyright', "op": 1200, "type": 'SID'},
-    {"name": 'fullName', "op": 2, "type": 'SID'},
-    {"name": 'familyName', "op": 3, "type": 'SID'},
-    {"name": 'weight', "op": 4, "type": 'SID'},
-    {"name": 'isFixedPitch', "op": 1201, "type": 'number', "value": 0},
-    {"name": 'italicAngle', "op": 1202, "type": 'number', "value": 0},
-    {"name": 'underlinePosition', "op": 1203, "type": 'number', "value": -100},
-    {"name": 'underlineThickness', "op": 1204, "type": 'number', "value": 50},
-    {"name": 'paintType', "op": 1205, "type": 'number', "value": 0},
-    {"name": 'charstringType', "op": 1206, "type": 'number', "value": 2},
-    {
-        "name": 'fontMatrix',
-        "op": 1207,
-        "type": ['real', 'real', 'real', 'real', 'real', 'real'],
-        "value": [0.001, 0, 0, 0.001, 0, 0]
-    },
-    {"name": 'uniqueId', "op": 13, "type": 'number'},
-    {"name": 'fontBBox', "op": 5, "type": ['number', 'number', 'number', 'number'], "value": [0, 0, 0, 0]},
-    {"name": 'strokeWidth', "op": 1208, "type": 'number', "value": 0},
-    {"name": 'xuid', "op": 14, "type": [], "value": null},
-    {"name": 'charset', "op": 15, "type": 'offset', "value": 0},
-    {"name": 'encoding', "op": 16, "type": 'offset', "value": 0},
-    {"name": 'charStrings', "op": 17, "type": 'offset', "value": 0},
-    {"name": 'private', "op": 18, "type": ['number', 'offset'], "value": [0, 0]},
-    {"name": 'ros', "op": 1230, "type": ['SID', 'SID', 'number']},
-    {"name": 'cidFontVersion', "op": 1231, "type": 'number', "value": 0},
-    {"name": 'cidFontRevision', "op": 1232, "type": 'number', "value": 0},
-    {"name": 'cidFontType', "op": 1233, "type": 'number', "value": 0},
-    {"name": 'cidCount', "op": 1234, "type": 'number', "value": 8720},
-    {"name": 'uidBase', "op": 1235, "type": 'number'},
-    {"name": 'fdArray', "op": 1236, "type": 'offset'},
-    {"name": 'fdSelect', "op": 1237, "type": 'offset'},
-    {"name": 'fontName', "op": 1238, "type": 'SID'}
+  {"name": 'version', "op": 0, "type": 'SID'},
+  {"name": 'notice', "op": 1, "type": 'SID'},
+  {"name": 'copyright', "op": 1200, "type": 'SID'},
+  {"name": 'fullName', "op": 2, "type": 'SID'},
+  {"name": 'familyName', "op": 3, "type": 'SID'},
+  {"name": 'weight', "op": 4, "type": 'SID'},
+  {"name": 'isFixedPitch', "op": 1201, "type": 'number', "value": 0},
+  {"name": 'italicAngle', "op": 1202, "type": 'number', "value": 0},
+  {"name": 'underlinePosition', "op": 1203, "type": 'number', "value": -100},
+  {"name": 'underlineThickness', "op": 1204, "type": 'number', "value": 50},
+  {"name": 'paintType', "op": 1205, "type": 'number', "value": 0},
+  {"name": 'charstringType', "op": 1206, "type": 'number', "value": 2},
+  {
+    "name": 'fontMatrix',
+    "op": 1207,
+    "type": ['real', 'real', 'real', 'real', 'real', 'real'],
+    "value": [0.001, 0, 0, 0.001, 0, 0]
+  },
+  {"name": 'uniqueId', "op": 13, "type": 'number'},
+  {
+    "name": 'fontBBox',
+    "op": 5,
+    "type": ['number', 'number', 'number', 'number'],
+    "value": [0, 0, 0, 0]
+  },
+  {"name": 'strokeWidth', "op": 1208, "type": 'number', "value": 0},
+  {"name": 'xuid', "op": 14, "type": [], "value": null},
+  {"name": 'charset', "op": 15, "type": 'offset', "value": 0},
+  {"name": 'encoding', "op": 16, "type": 'offset', "value": 0},
+  {"name": 'charStrings', "op": 17, "type": 'offset', "value": 0},
+  {
+    "name": 'private',
+    "op": 18,
+    "type": ['number', 'offset'],
+    "value": [0, 0]
+  },
+  {
+    "name": 'ros',
+    "op": 1230,
+    "type": ['SID', 'SID', 'number']
+  },
+  {"name": 'cidFontVersion', "op": 1231, "type": 'number', "value": 0},
+  {"name": 'cidFontRevision', "op": 1232, "type": 'number', "value": 0},
+  {"name": 'cidFontType', "op": 1233, "type": 'number', "value": 0},
+  {"name": 'cidCount', "op": 1234, "type": 'number', "value": 8720},
+  {"name": 'uidBase', "op": 1235, "type": 'number'},
+  {"name": 'fdArray', "op": 1236, "type": 'offset'},
+  {"name": 'fdSelect', "op": 1237, "type": 'offset'},
+  {"name": 'fontName', "op": 1238, "type": 'SID'}
 ];
 
 var PRIVATE_DICT_META = [
-    {"name": 'subrs', "op": 19, "type": 'offset', "value": 0},
-    {"name": 'defaultWidthX', "op": 20, "type": 'number', "value": 0},
-    {"name": 'nominalWidthX', "op": 21, "type": 'number', "value": 0}
+  {"name": 'subrs', "op": 19, "type": 'offset', "value": 0},
+  {"name": 'defaultWidthX', "op": 20, "type": 'number', "value": 0},
+  {"name": 'nominalWidthX', "op": 21, "type": 'number', "value": 0}
 ];
 
 // Parse the CFF top dictionary. A CFF table can contain multiple fonts, each with their own top dictionary.
 // The top dictionary contains the essential metadata for the font, together with the private dictionary.
-parseCFFTopDict(data, strings) {
-  var dict = parseCFFDict(data, 0, data.byteLength);
+Map<String, dynamic> parseCFFTopDict(ByteData data, strings) {
+  var dict = parseCFFDict(data, 0, data.lengthInBytes);
   return interpretDict(dict, TOP_DICT_META, strings);
 }
 
@@ -383,786 +429,817 @@ parseCFFPrivateDict(data, start, size, strings) {
 //
 //    _privateDict     saved copy of parsed Private DICT from Top DICT
 gatherCFFTopDicts(data, start, cffIndex, strings) {
-    var topDictArray = [];
-    for (var iTopDict = 0; iTopDict < cffIndex.length; iTopDict += 1) {
-        
-        
-        // var topDictData = new DataView(new Uint8Array(cffIndex[iTopDict]).buffer);
-        var topDictData = ByteData.view(Uint8List(cffIndex[iTopDict]).buffer);
+  var topDictArray = [];
+  for (var iTopDict = 0; iTopDict < cffIndex.length; iTopDict += 1) {
+    // var topDictData = new DataView(new Uint8Array(cffIndex[iTopDict]).buffer);
 
+    List<int> _list = List<int>.from(cffIndex[iTopDict]);
+    var topDictData = ByteData.view(Uint8List.fromList(_list).buffer);
 
-        var topDict = parseCFFTopDict(topDictData, strings);
-        topDict._subrs = [];
-        topDict._subrsBias = 0;
-        topDict._defaultWidthX = 0;
-        topDict._nominalWidthX = 0;
-        var privateSize = topDict.private[0];
-        var privateOffset = topDict.private[1];
-        if (privateSize != 0 && privateOffset != 0) {
-            var privateDict = parseCFFPrivateDict(data, privateOffset + start, privateSize, strings);
-            topDict._defaultWidthX = privateDict.defaultWidthX;
-            topDict._nominalWidthX = privateDict.nominalWidthX;
-            if (privateDict.subrs != 0) {
-                var subrOffset = privateOffset + privateDict.subrs;
-                var subrIndex = parseCFFIndex(data, subrOffset + start, null);
-                topDict._subrs = subrIndex.objects;
-                topDict._subrsBias = calcCFFSubroutineBias(topDict._subrs);
-            }
-            topDict._privateDict = privateDict;
-        }
-        topDictArray.add(topDict);
+    Map<String, dynamic> topDict = parseCFFTopDict(topDictData, strings);
+    topDict["_subrs"] = [];
+    topDict["_subrsBias"] = 0;
+    topDict["_defaultWidthX"] = 0;
+    topDict["_nominalWidthX"] = 0;
+    var privateSize = topDict["private"][0];
+    var privateOffset = topDict["private"][1];
+    if (privateSize != 0 && privateOffset != 0) {
+      var privateDict = parseCFFPrivateDict(
+          data, privateOffset + start, privateSize, strings);
+      topDict["_defaultWidthX"] = privateDict["defaultWidthX"];
+      topDict["_nominalWidthX"] = privateDict["nominalWidthX"];
+      if (privateDict["subrs"] != 0) {
+        var subrOffset = privateOffset + privateDict["subrs"];
+        var subrIndex = parseCFFIndex(data, subrOffset + start, null);
+        topDict["_subrs"] = subrIndex.objects;
+        topDict["_subrsBias"] = calcCFFSubroutineBias(topDict["_subrs"]);
+      }
+      topDict["_privateDict"] = privateDict;
     }
-    return topDictArray;
+    topDictArray.add(topDict);
+  }
+  return topDictArray;
 }
 
 // Parse the CFF charset table, which contains internal names for all the glyphs.
 // This function will return a list of glyph names.
 // See Adobe TN #5176 chapter 13, "Charsets".
 parseCFFCharset(data, start, nGlyphs, strings) {
-    var sid;
-    var count;
-    var parser = Parser(data, start);
+  var sid;
+  var count;
+  var parser = Parser(data, start);
 
-    // The .notdef glyph is not included, so subtract 1.
-    nGlyphs -= 1;
-    var charset = ['.notdef'];
+  // The .notdef glyph is not included, so subtract 1.
+  nGlyphs -= 1;
+  List<String?> charset = ['.notdef'];
 
-    var format = parser.parseCard8();
-    if (format == 0) {
-        for (var i = 0; i < nGlyphs; i += 1) {
-            sid = parser.parseSID();
-            charset.add(getCFFString(strings, sid));
-        }
-    } else if (format == 1) {
-        while (charset.length <= nGlyphs) {
-            sid = parser.parseSID();
-            count = parser.parseCard8();
-            for (var i = 0; i <= count; i += 1) {
-                charset.add(getCFFString(strings, sid));
-                sid += 1;
-            }
-        }
-    } else if (format == 2) {
-        while (charset.length <= nGlyphs) {
-            sid = parser.parseSID();
-            count = parser.parseCard16();
-            for (var i = 0; i <= count; i += 1) {
-                charset.add(getCFFString(strings, sid));
-                sid += 1;
-            }
-        }
-    } else {
-        throw('Unknown charset format ' + format);
+  var format = parser.parseCard8();
+  if (format == 0) {
+    for (var i = 0; i < nGlyphs; i += 1) {
+      sid = parser.parseSID();
+      charset.add(getCFFString(strings, sid));
     }
+  } else if (format == 1) {
+    while (charset.length <= nGlyphs) {
+      sid = parser.parseSID();
+      count = parser.parseCard8();
+      for (var i = 0; i <= count; i += 1) {
+        charset.add(getCFFString(strings, sid));
+        sid += 1;
+      }
+    }
+  } else if (format == 2) {
+    while (charset.length <= nGlyphs) {
+      sid = parser.parseSID();
+      count = parser.parseCard16();
 
-    return charset;
+      for (var i = 0; i <= count; i += 1) {
+        charset.add(getCFFString(strings, sid));
+        sid += 1;
+      }
+    }
+  } else {
+    throw ('Unknown charset format ' + format);
+  }
+
+  return charset;
 }
 
 // Parse the CFF encoding data. Only one encoding can be specified per font.
 // See Adobe TN #5176 chapter 12, "Encodings".
 parseCFFEncoding(data, start, charset) {
-    var code;
-    var enc = {};
-    var parser = new Parser(data, start);
-    var format = parser.parseCard8();
-    if (format == 0) {
-        var nCodes = parser.parseCard8();
-        for (var i = 0; i < nCodes; i += 1) {
-            code = parser.parseCard8();
-            enc[code] = i;
-        }
-    } else if (format == 1) {
-        var nRanges = parser.parseCard8();
-        code = 1;
-        for (var i = 0; i < nRanges; i += 1) {
-            var first = parser.parseCard8();
-            var nLeft = parser.parseCard8();
-            for (var j = first; j <= first + nLeft; j += 1) {
-                enc[j] = code;
-                code += 1;
-            }
-        }
-    } else {
-        throw('Unknown encoding format ' + format);
+  var code;
+  var enc = {};
+  var parser = new Parser(data, start);
+  var format = parser.parseCard8();
+  if (format == 0) {
+    var nCodes = parser.parseCard8();
+    for (var i = 0; i < nCodes; i += 1) {
+      code = parser.parseCard8();
+      enc[code] = i;
     }
+  } else if (format == 1) {
+    var nRanges = parser.parseCard8();
+    code = 1;
+    for (var i = 0; i < nRanges; i += 1) {
+      var first = parser.parseCard8();
+      var nLeft = parser.parseCard8();
+      for (var j = first; j <= first + nLeft; j += 1) {
+        enc[j] = code;
+        code += 1;
+      }
+    }
+  } else {
+    throw ('Unknown encoding format ' + format);
+  }
 
-    return new CffEncoding(enc, charset);
+  return new CffEncoding(enc, charset);
 }
 
 // Take in charstring code and return a Glyph object.
 // The encoding is described in the Type 2 Charstring Format
 // https://www.microsoft.com/typography/OTSPEC/charstr2.htm
-parseCFFCharstring(font, glyph, code) {
-    var c1x;
-    var c1y;
-    var c2x;
-    var c2y;
-    var p = new Path();
-    List<num> stack = [];
-    var nStems = 0;
-    var haveWidth = false;
-    var open = false;
-    num x = 0;
-    num y = 0;
-    var subrs;
-    var subrsBias;
-    var defaultWidthX;
-    var nominalWidthX;
-    if (font.isCIDFont) {
-        var fdIndex = font.tables.cff.topDict._fdSelect[glyph.index];
-        var fdDict = font.tables.cff.topDict._fdArray[fdIndex];
-        subrs = fdDict._subrs;
-        subrsBias = fdDict._subrsBias;
-        defaultWidthX = fdDict._defaultWidthX;
-        nominalWidthX = fdDict._nominalWidthX;
-    } else {
-        subrs = font.tables.cff.topDict._subrs;
-        subrsBias = font.tables.cff.topDict._subrsBias;
-        defaultWidthX = font.tables.cff.topDict._defaultWidthX;
-        nominalWidthX = font.tables.cff.topDict._nominalWidthX;
+parseCFFCharstring(Font font, glyph, code) {
+  var c1x;
+  var c1y;
+  var c2x;
+  var c2y;
+  var p = new Path();
+  List<num> stack = [];
+  var nStems = 0;
+  var haveWidth = false;
+  var open = false;
+  num x = 0;
+  num y = 0;
+  var subrs;
+  var subrsBias;
+  var defaultWidthX;
+  var nominalWidthX;
+  if (font.isCIDFont) {
+    var fdIndex = font.tables["cff"]["topDict"]["_fdSelect"][glyph.index];
+    var fdDict = font.tables["cff"]["topDict"]["_fdArray"][fdIndex];
+    subrs = fdDict["_subrs"];
+    subrsBias = fdDict["_subrsBias"];
+    defaultWidthX = fdDict["_defaultWidthX"];
+    nominalWidthX = fdDict["_nominalWidthX"];
+  } else {
+    subrs = font.tables["cff"]["topDict"]["_subrs"];
+    subrsBias = font.tables["cff"]["topDict"]["_subrsBias"];
+    defaultWidthX = font.tables["cff"]["topDict"]["_defaultWidthX"];
+    nominalWidthX = font.tables["cff"]["topDict"]["_nominalWidthX"];
+  }
+  var width = defaultWidthX;
+
+  Function newContour = (x, y) {
+    if (open) {
+      p.closePath();
     }
-    var width = defaultWidthX;
 
-    Function newContour = (x, y) {
-        if (open) {
-            p.closePath();
-        }
+    p.moveTo(x, y);
+    open = true;
+  };
 
-        p.moveTo(x, y);
-        open = true;
-    };
+  Function parseStems = () {
+    var hasWidthArg;
 
-    Function parseStems = () {
-        var hasWidthArg;
+    // The number of stem operators on the stack is always even.
+    // If the value is uneven, that means a width is specified.
+    hasWidthArg = stack.length % 2 != 0;
+    if (hasWidthArg && !haveWidth) {
+      width = stack.removeAt(0) + nominalWidthX;
+    }
 
-        // The number of stem operators on the stack is always even.
-        // If the value is uneven, that means a width is specified.
-        hasWidthArg = stack.length % 2 != 0;
-        if (hasWidthArg && !haveWidth) {
+    nStems += stack.length >> 1;
+    stack.length = 0;
+    haveWidth = true;
+  };
+
+  __parse(code) {
+    var b1;
+    var b2;
+    var b3;
+    var b4;
+    var codeIndex;
+    var subrCode;
+    var jpx;
+    var jpy;
+    var c3x;
+    var c3y;
+    var c4x;
+    var c4y;
+
+    var i = 0;
+    while (i < code.length) {
+      var v = code[i];
+      i += 1;
+      switch (v) {
+        case 1: // hstem
+          parseStems();
+          break;
+        case 3: // vstem
+          parseStems();
+          break;
+        case 4: // vmoveto
+          if (stack.length > 1 && !haveWidth) {
             width = stack.removeAt(0) + nominalWidthX;
-        }
+            haveWidth = true;
+          }
 
-        nStems += stack.length >> 1;
-        stack.length = 0;
-        haveWidth = true;
-    };
+          y += stack.removeLast();
+          newContour(x, y);
+          break;
+        case 5: // rlineto
+          while (stack.length > 0) {
+            x += stack.removeAt(0);
+            y += stack.removeAt(0);
+            p.lineTo(x, y);
+          }
 
-    __parse(code) {
-        var b1;
-        var b2;
-        var b3;
-        var b4;
-        var codeIndex;
-        var subrCode;
-        var jpx;
-        var jpy;
-        var c3x;
-        var c3y;
-        var c4x;
-        var c4y;
-
-        var i = 0;
-        while (i < code.length) {
-            var v = code[i];
-            i += 1;
-            switch (v) {
-                case 1: // hstem
-                    parseStems();
-                    break;
-                case 3: // vstem
-                    parseStems();
-                    break;
-                case 4: // vmoveto
-                    if (stack.length > 1 && !haveWidth) {
-                        width = stack.removeAt(0) + nominalWidthX;
-                        haveWidth = true;
-                    }
-
-                    y += stack.removeLast();
-                    newContour(x, y);
-                    break;
-                case 5: // rlineto
-                    while (stack.length > 0) {
-                        x += stack.removeAt(0);
-                        y += stack.removeAt(0);
-                        p.lineTo(x, y);
-                    }
-
-                    break;
-                case 6: // hlineto
-                    while (stack.length > 0) {
-                        x += stack.removeAt(0);
-                        p.lineTo(x, y);
-                        if (stack.length == 0) {
-                            break;
-                        }
-
-                        y += stack.removeAt(0);
-                        p.lineTo(x, y);
-                    }
-
-                    break;
-                case 7: // vlineto
-                    while (stack.length > 0) {
-                        y += stack.removeAt(0);
-                        p.lineTo(x, y);
-                        if (stack.length == 0) {
-                            break;
-                        }
-
-                        x += stack.removeAt(0);
-                        p.lineTo(x, y);
-                    }
-
-                    break;
-                case 8: // rrcurveto
-                    while (stack.length > 0) {
-                        c1x = x + stack.removeAt(0);
-                        c1y = y + stack.removeAt(0);
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        x = c2x + stack.removeAt(0);
-                        y = c2y + stack.removeAt(0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    }
-
-                    break;
-                case 10: // callsubr
-                    codeIndex = stack.removeLast() + subrsBias;
-                    subrCode = subrs[codeIndex];
-                    if (subrCode) {
-                        __parse(subrCode);
-                    }
-
-                    break;
-                case 11: // return
-                    return;
-                case 12: // flex operators
-                    v = code[i];
-                    i += 1;
-                    switch (v) {
-                        case 35: // flex
-                            // |- dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 dx6 dy6 fd flex (12 35) |-
-                            c1x = x   + stack.removeAt(0);    // dx1
-                            c1y = y   + stack.removeAt(0);    // dy1
-                            c2x = c1x + stack.removeAt(0);    // dx2
-                            c2y = c1y + stack.removeAt(0);    // dy2
-                            jpx = c2x + stack.removeAt(0);    // dx3
-                            jpy = c2y + stack.removeAt(0);    // dy3
-                            c3x = jpx + stack.removeAt(0);    // dx4
-                            c3y = jpy + stack.removeAt(0);    // dy4
-                            c4x = c3x + stack.removeAt(0);    // dx5
-                            c4y = c3y + stack.removeAt(0);    // dy5
-                            x = c4x   + stack.removeAt(0);    // dx6
-                            y = c4y   + stack.removeAt(0);    // dy6
-                            stack.removeAt(0);                // flex depth
-                            p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-                            p.curveTo(c3x, c3y, c4x, c4y, x, y);
-                            break;
-                        case 34: // hflex
-                            // |- dx1 dx2 dy2 dx3 dx4 dx5 dx6 hflex (12 34) |-
-                            c1x = x   + stack.removeAt(0);    // dx1
-                            c1y = y;                      // dy1
-                            c2x = c1x + stack.removeAt(0);    // dx2
-                            c2y = c1y + stack.removeAt(0);    // dy2
-                            jpx = c2x + stack.removeAt(0);    // dx3
-                            jpy = c2y;                    // dy3
-                            c3x = jpx + stack.removeAt(0);    // dx4
-                            c3y = c2y;                    // dy4
-                            c4x = c3x + stack.removeAt(0);    // dx5
-                            c4y = y;                      // dy5
-                            x = c4x + stack.removeAt(0);      // dx6
-                            p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-                            p.curveTo(c3x, c3y, c4x, c4y, x, y);
-                            break;
-                        case 36: // hflex1
-                            // |- dx1 dy1 dx2 dy2 dx3 dx4 dx5 dy5 dx6 hflex1 (12 36) |-
-                            c1x = x   + stack.removeAt(0);    // dx1
-                            c1y = y   + stack.removeAt(0);    // dy1
-                            c2x = c1x + stack.removeAt(0);    // dx2
-                            c2y = c1y + stack.removeAt(0);    // dy2
-                            jpx = c2x + stack.removeAt(0);    // dx3
-                            jpy = c2y;                    // dy3
-                            c3x = jpx + stack.removeAt(0);    // dx4
-                            c3y = c2y;                    // dy4
-                            c4x = c3x + stack.removeAt(0);    // dx5
-                            c4y = c3y + stack.removeAt(0);    // dy5
-                            x = c4x + stack.removeAt(0);      // dx6
-                            p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-                            p.curveTo(c3x, c3y, c4x, c4y, x, y);
-                            break;
-                        case 37: // flex1
-                            // |- dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 d6 flex1 (12 37) |-
-                            c1x = x   + stack.removeAt(0);    // dx1
-                            c1y = y   + stack.removeAt(0);    // dy1
-                            c2x = c1x + stack.removeAt(0);    // dx2
-                            c2y = c1y + stack.removeAt(0);    // dy2
-                            jpx = c2x + stack.removeAt(0);    // dx3
-                            jpy = c2y + stack.removeAt(0);    // dy3
-                            c3x = jpx + stack.removeAt(0);    // dx4
-                            c3y = jpy + stack.removeAt(0);    // dy4
-                            c4x = c3x + stack.removeAt(0);    // dx5
-                            c4y = c3y + stack.removeAt(0);    // dy5
-                            if (Math.abs(c4x - x) > Math.abs(c4y - y)) {
-                                x = c4x + stack.removeAt(0);
-                            } else {
-                                y = c4y + stack.removeAt(0);
-                            }
-
-                            p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
-                            p.curveTo(c3x, c3y, c4x, c4y, x, y);
-                            break;
-                        default:
-                            print('Glyph ' + glyph.index + ': unknown operator ${1200}' + v);
-                            stack.length = 0;
-                    }
-                    break;
-                case 14: // endchar
-                    if (stack.length > 0 && !haveWidth) {
-                        width = stack.removeAt(0) + nominalWidthX;
-                        haveWidth = true;
-                    }
-
-                    if (open) {
-                        p.closePath();
-                        open = false;
-                    }
-
-                    break;
-                case 18: // hstemhm
-                    parseStems();
-                    break;
-                case 19: // hintmask
-                case 20: // cntrmask
-                    parseStems();
-                    i += (nStems + 7) >> 3;
-                    break;
-                case 21: // rmoveto
-                    if (stack.length > 2 && !haveWidth) {
-                        width = stack.removeAt(0) + nominalWidthX;
-                        haveWidth = true;
-                    }
-
-                    y += stack.removeLast();
-                    x += stack.removeLast();
-                    newContour(x, y);
-                    break;
-                case 22: // hmoveto
-                    if (stack.length > 1 && !haveWidth) {
-                        width = stack.removeAt(0) + nominalWidthX;
-                        haveWidth = true;
-                    }
-
-                    x += stack.removeLast();
-                    newContour(x, y);
-                    break;
-                case 23: // vstemhm
-                    parseStems();
-                    break;
-                case 24: // rcurveline
-                    while (stack.length > 2) {
-                        c1x = x + stack.removeAt(0);
-                        c1y = y + stack.removeAt(0);
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        x = c2x + stack.removeAt(0);
-                        y = c2y + stack.removeAt(0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    }
-
-                    x += stack.removeAt(0);
-                    y += stack.removeAt(0);
-                    p.lineTo(x, y);
-                    break;
-                case 25: // rlinecurve
-                    while (stack.length > 6) {
-                        x += stack.removeAt(0);
-                        y += stack.removeAt(0);
-                        p.lineTo(x, y);
-                    }
-
-                    c1x = x + stack.removeAt(0);
-                    c1y = y + stack.removeAt(0);
-                    c2x = c1x + stack.removeAt(0);
-                    c2y = c1y + stack.removeAt(0);
-                    x = c2x + stack.removeAt(0);
-                    y = c2y + stack.removeAt(0);
-                    p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    break;
-                case 26: // vvcurveto
-                    if (stack.length % 2 != 0) {
-                        x += stack.removeAt(0);
-                    }
-
-                    while (stack.length > 0) {
-                        c1x = x;
-                        c1y = y + stack.removeAt(0);
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        x = c2x;
-                        y = c2y + stack.removeAt(0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    }
-
-                    break;
-                case 27: // hhcurveto
-                    if (stack.length % 2 != 0) {
-                        y += stack.removeAt(0);
-                    }
-
-                    while (stack.length > 0) {
-                        c1x = x + stack.removeAt(0);
-                        c1y = y;
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        x = c2x + stack.removeAt(0);
-                        y = c2y;
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    }
-
-                    break;
-                case 28: // shortint
-                    b1 = code[i];
-                    b2 = code[i + 1];
-                    stack.add(((b1 << 24) | (b2 << 16)) >> 16);
-                    i += 2;
-                    break;
-                case 29: // callgsubr
-                    codeIndex = stack.removeLast() + font.gsubrsBias;
-                    subrCode = font.gsubrs[codeIndex];
-                    if (subrCode) {
-                        __parse(subrCode);
-                    }
-
-                    break;
-                case 30: // vhcurveto
-                    while (stack.length > 0) {
-                        c1x = x;
-                        c1y = y + stack.removeAt(0);
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        x = c2x + stack.removeAt(0);
-                        y = c2y + (stack.length == 1 ? stack.removeAt(0) : 0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                        if (stack.length == 0) {
-                            break;
-                        }
-
-                        c1x = x + stack.removeAt(0);
-                        c1y = y;
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        y = c2y + stack.removeAt(0);
-                        x = c2x + (stack.length == 1 ? stack.removeAt(0) : 0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    }
-
-                    break;
-                case 31: // hvcurveto
-                    while (stack.length > 0) {
-                        c1x = x + stack.removeAt(0);
-                        c1y = y;
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        y = c2y + stack.removeAt(0);
-                        x = c2x + (stack.length == 1 ? stack.removeAt(0) : 0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                        if (stack.length == 0) {
-                            break;
-                        }
-
-                        c1x = x;
-                        c1y = y + stack.removeAt(0);
-                        c2x = c1x + stack.removeAt(0);
-                        c2y = c1y + stack.removeAt(0);
-                        x = c2x + stack.removeAt(0);
-                        y = c2y + (stack.length == 1 ? stack.removeAt(0) : 0);
-                        p.curveTo(c1x, c1y, c2x, c2y, x, y);
-                    }
-
-                    break;
-                default:
-                    if (v < 32) {
-                        print('Glyph ' + glyph.index + ': unknown operator ' + v);
-                    } else if (v < 247) {
-                        stack.add(v - 139);
-                    } else if (v < 251) {
-                        b1 = code[i];
-                        i += 1;
-                        stack.add((v - 247) * 256 + b1 + 108);
-                    } else if (v < 255) {
-                        b1 = code[i];
-                        i += 1;
-                        stack.add(-(v - 251) * 256 - b1 - 108);
-                    } else {
-                        b1 = code[i];
-                        b2 = code[i + 1];
-                        b3 = code[i + 2];
-                        b4 = code[i + 3];
-                        i += 4;
-                        stack.add(((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) / 65536);
-                    }
+          break;
+        case 6: // hlineto
+          while (stack.length > 0) {
+            x += stack.removeAt(0);
+            p.lineTo(x, y);
+            if (stack.length == 0) {
+              break;
             }
-        }
+
+            y += stack.removeAt(0);
+            p.lineTo(x, y);
+          }
+
+          break;
+        case 7: // vlineto
+          while (stack.length > 0) {
+            y += stack.removeAt(0);
+            p.lineTo(x, y);
+            if (stack.length == 0) {
+              break;
+            }
+
+            x += stack.removeAt(0);
+            p.lineTo(x, y);
+          }
+
+          break;
+        case 8: // rrcurveto
+          while (stack.length > 0) {
+            c1x = x + stack.removeAt(0);
+            c1y = y + stack.removeAt(0);
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            x = c2x + stack.removeAt(0);
+            y = c2y + stack.removeAt(0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          }
+
+          break;
+        case 10: // callsubr
+          codeIndex = stack.removeLast() + subrsBias;
+          subrCode = subrs[codeIndex];
+          if (subrCode) {
+            __parse(subrCode);
+          }
+
+          break;
+        case 11: // return
+          return;
+        case 12: // flex operators
+          v = code[i];
+          i += 1;
+          switch (v) {
+            case 35: // flex
+              // |- dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 dx6 dy6 fd flex (12 35) |-
+              c1x = x + stack.removeAt(0); // dx1
+              c1y = y + stack.removeAt(0); // dy1
+              c2x = c1x + stack.removeAt(0); // dx2
+              c2y = c1y + stack.removeAt(0); // dy2
+              jpx = c2x + stack.removeAt(0); // dx3
+              jpy = c2y + stack.removeAt(0); // dy3
+              c3x = jpx + stack.removeAt(0); // dx4
+              c3y = jpy + stack.removeAt(0); // dy4
+              c4x = c3x + stack.removeAt(0); // dx5
+              c4y = c3y + stack.removeAt(0); // dy5
+              x = c4x + stack.removeAt(0); // dx6
+              y = c4y + stack.removeAt(0); // dy6
+              stack.removeAt(0); // flex depth
+              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              break;
+            case 34: // hflex
+              // |- dx1 dx2 dy2 dx3 dx4 dx5 dx6 hflex (12 34) |-
+              c1x = x + stack.removeAt(0); // dx1
+              c1y = y; // dy1
+              c2x = c1x + stack.removeAt(0); // dx2
+              c2y = c1y + stack.removeAt(0); // dy2
+              jpx = c2x + stack.removeAt(0); // dx3
+              jpy = c2y; // dy3
+              c3x = jpx + stack.removeAt(0); // dx4
+              c3y = c2y; // dy4
+              c4x = c3x + stack.removeAt(0); // dx5
+              c4y = y; // dy5
+              x = c4x + stack.removeAt(0); // dx6
+              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              break;
+            case 36: // hflex1
+              // |- dx1 dy1 dx2 dy2 dx3 dx4 dx5 dy5 dx6 hflex1 (12 36) |-
+              c1x = x + stack.removeAt(0); // dx1
+              c1y = y + stack.removeAt(0); // dy1
+              c2x = c1x + stack.removeAt(0); // dx2
+              c2y = c1y + stack.removeAt(0); // dy2
+              jpx = c2x + stack.removeAt(0); // dx3
+              jpy = c2y; // dy3
+              c3x = jpx + stack.removeAt(0); // dx4
+              c3y = c2y; // dy4
+              c4x = c3x + stack.removeAt(0); // dx5
+              c4y = c3y + stack.removeAt(0); // dy5
+              x = c4x + stack.removeAt(0); // dx6
+              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              break;
+            case 37: // flex1
+              // |- dx1 dy1 dx2 dy2 dx3 dy3 dx4 dy4 dx5 dy5 d6 flex1 (12 37) |-
+              c1x = x + stack.removeAt(0); // dx1
+              c1y = y + stack.removeAt(0); // dy1
+              c2x = c1x + stack.removeAt(0); // dx2
+              c2y = c1y + stack.removeAt(0); // dy2
+              jpx = c2x + stack.removeAt(0); // dx3
+              jpy = c2y + stack.removeAt(0); // dy3
+              c3x = jpx + stack.removeAt(0); // dx4
+              c3y = jpy + stack.removeAt(0); // dy4
+              c4x = c3x + stack.removeAt(0); // dx5
+              c4y = c3y + stack.removeAt(0); // dy5
+              if (Math.abs(c4x - x) > Math.abs(c4y - y)) {
+                x = c4x + stack.removeAt(0);
+              } else {
+                y = c4y + stack.removeAt(0);
+              }
+
+              p.curveTo(c1x, c1y, c2x, c2y, jpx, jpy);
+              p.curveTo(c3x, c3y, c4x, c4y, x, y);
+              break;
+            default:
+              print('Glyph ' + glyph.index + ': unknown operator ${1200}' + v);
+              stack.length = 0;
+          }
+          break;
+        case 14: // endchar
+          if (stack.length > 0 && !haveWidth) {
+            width = stack.removeAt(0) + nominalWidthX;
+            haveWidth = true;
+          }
+
+          if (open) {
+            p.closePath();
+            open = false;
+          }
+
+          break;
+        case 18: // hstemhm
+          parseStems();
+          break;
+        case 19: // hintmask
+        case 20: // cntrmask
+          parseStems();
+          i += (nStems + 7) >> 3;
+          break;
+        case 21: // rmoveto
+          if (stack.length > 2 && !haveWidth) {
+            width = stack.removeAt(0) + nominalWidthX;
+            haveWidth = true;
+          }
+
+          y += stack.removeLast();
+          x += stack.removeLast();
+          newContour(x, y);
+          break;
+        case 22: // hmoveto
+          if (stack.length > 1 && !haveWidth) {
+            width = stack.removeAt(0) + nominalWidthX;
+            haveWidth = true;
+          }
+
+          x += stack.removeLast();
+          newContour(x, y);
+          break;
+        case 23: // vstemhm
+          parseStems();
+          break;
+        case 24: // rcurveline
+          while (stack.length > 2) {
+            c1x = x + stack.removeAt(0);
+            c1y = y + stack.removeAt(0);
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            x = c2x + stack.removeAt(0);
+            y = c2y + stack.removeAt(0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          }
+
+          x += stack.removeAt(0);
+          y += stack.removeAt(0);
+          p.lineTo(x, y);
+          break;
+        case 25: // rlinecurve
+          while (stack.length > 6) {
+            x += stack.removeAt(0);
+            y += stack.removeAt(0);
+            p.lineTo(x, y);
+          }
+
+          c1x = x + stack.removeAt(0);
+          c1y = y + stack.removeAt(0);
+          c2x = c1x + stack.removeAt(0);
+          c2y = c1y + stack.removeAt(0);
+          x = c2x + stack.removeAt(0);
+          y = c2y + stack.removeAt(0);
+          p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          break;
+        case 26: // vvcurveto
+          if (stack.length % 2 != 0) {
+            x += stack.removeAt(0);
+          }
+
+          while (stack.length > 0) {
+            c1x = x;
+            c1y = y + stack.removeAt(0);
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            x = c2x;
+            y = c2y + stack.removeAt(0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          }
+
+          break;
+        case 27: // hhcurveto
+          if (stack.length % 2 != 0) {
+            y += stack.removeAt(0);
+          }
+
+          while (stack.length > 0) {
+            c1x = x + stack.removeAt(0);
+            c1y = y;
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            x = c2x + stack.removeAt(0);
+            y = c2y;
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          }
+
+          break;
+        case 28: // shortint
+          b1 = code[i];
+          b2 = code[i + 1];
+          stack.add(((b1 << 24) | (b2 << 16)) >> 16);
+          i += 2;
+          break;
+        case 29: // callgsubr
+          codeIndex = stack.removeLast() + font.gsubrsBias;
+          subrCode = font.gsubrs[codeIndex];
+          if (subrCode) {
+            __parse(subrCode);
+          }
+
+          break;
+        case 30: // vhcurveto
+          while (stack.length > 0) {
+            c1x = x;
+            c1y = y + stack.removeAt(0);
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            x = c2x + stack.removeAt(0);
+            y = c2y + (stack.length == 1 ? stack.removeAt(0) : 0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            if (stack.length == 0) {
+              break;
+            }
+
+            c1x = x + stack.removeAt(0);
+            c1y = y;
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            y = c2y + stack.removeAt(0);
+            x = c2x + (stack.length == 1 ? stack.removeAt(0) : 0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          }
+
+          break;
+        case 31: // hvcurveto
+          while (stack.length > 0) {
+            c1x = x + stack.removeAt(0);
+            c1y = y;
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            y = c2y + stack.removeAt(0);
+            x = c2x + (stack.length == 1 ? stack.removeAt(0) : 0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+            if (stack.length == 0) {
+              break;
+            }
+
+            c1x = x;
+            c1y = y + stack.removeAt(0);
+            c2x = c1x + stack.removeAt(0);
+            c2y = c1y + stack.removeAt(0);
+            x = c2x + stack.removeAt(0);
+            y = c2y + (stack.length == 1 ? stack.removeAt(0) : 0);
+            p.curveTo(c1x, c1y, c2x, c2y, x, y);
+          }
+
+          break;
+        default:
+          if (v < 32) {
+            print('Glyph ' + glyph.index + ': unknown operator ' + v);
+          } else if (v < 247) {
+            stack.add(v - 139);
+          } else if (v < 251) {
+            b1 = code[i];
+            i += 1;
+            stack.add((v - 247) * 256 + b1 + 108);
+          } else if (v < 255) {
+            b1 = code[i];
+            i += 1;
+            stack.add(-(v - 251) * 256 - b1 - 108);
+          } else {
+            b1 = code[i];
+            b2 = code[i + 1];
+            b3 = code[i + 2];
+            b4 = code[i + 3];
+            i += 4;
+            stack.add(((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) / 65536);
+          }
+      }
     }
+  }
 
-    __parse(code);
+  __parse(code);
 
-    glyph.advanceWidth = width;
-    return p;
+  glyph.advanceWidth = width;
+  return p;
 }
 
-
 parseCFFFDSelect(data, start, nGlyphs, fdArrayCount) {
-    var fdSelect = [];
-    var fdIndex;
-    var parser = Parser(data, start);
-    var format = parser.parseCard8();
-    if (format == 0) {
-        // Simple list of nGlyphs elements
-        for (var iGid = 0; iGid < nGlyphs; iGid++) {
-            fdIndex = parser.parseCard8();
-            if (fdIndex >= fdArrayCount) {
-                throw('CFF table CID Font FDSelect has bad FD index value ' + fdIndex + ' (FD count ' + fdArrayCount + ')');
-            }
-            fdSelect.add(fdIndex);
-        }
-    } else if (format == 3) {
-        // Ranges
-        var nRanges = parser.parseCard16();
-        var first = parser.parseCard16();
-        if (first != 0) {
-            throw('CFF Table CID Font FDSelect format 3 range has bad initial GID ' + first);
-        }
-        var next;
-        for (var iRange = 0; iRange < nRanges; iRange++) {
-            fdIndex = parser.parseCard8();
-            next = parser.parseCard16();
-            if (fdIndex >= fdArrayCount) {
-                throw('CFF table CID Font FDSelect has bad FD index value ' + fdIndex + ' (FD count ' + fdArrayCount + ')');
-            }
-            if (next > nGlyphs) {
-                throw('CFF Table CID Font FDSelect format 3 range has bad GID ' + next);
-            }
-            for (; first < next; first++) {
-                fdSelect.add(fdIndex);
-            }
-            first = next;
-        }
-        if (next != nGlyphs) {
-            throw('CFF Table CID Font FDSelect format 3 range has bad final GID ' + next);
-        }
-    } else {
-        throw('CFF Table CID Font FDSelect table has unsupported format ' + format);
+  var fdSelect = [];
+  var fdIndex;
+  var parser = Parser(data, start);
+  var format = parser.parseCard8();
+  if (format == 0) {
+    // Simple list of nGlyphs elements
+    for (var iGid = 0; iGid < nGlyphs; iGid++) {
+      fdIndex = parser.parseCard8();
+      if (fdIndex >= fdArrayCount) {
+        throw ('CFF table CID Font FDSelect has bad FD index value ' +
+            fdIndex +
+            ' (FD count ' +
+            fdArrayCount +
+            ')');
+      }
+      fdSelect.add(fdIndex);
     }
-    return fdSelect;
+  } else if (format == 3) {
+    // Ranges
+    var nRanges = parser.parseCard16();
+    var first = parser.parseCard16();
+    if (first != 0) {
+      throw ('CFF Table CID Font FDSelect format 3 range has bad initial GID ' +
+          first);
+    }
+    var next;
+    for (var iRange = 0; iRange < nRanges; iRange++) {
+      fdIndex = parser.parseCard8();
+      next = parser.parseCard16();
+      if (fdIndex >= fdArrayCount) {
+        throw ('CFF table CID Font FDSelect has bad FD index value ' +
+            fdIndex +
+            ' (FD count ' +
+            fdArrayCount +
+            ')');
+      }
+      if (next > nGlyphs) {
+        throw ('CFF Table CID Font FDSelect format 3 range has bad GID ' +
+            next);
+      }
+      for (; first < next; first++) {
+        fdSelect.add(fdIndex);
+      }
+      first = next;
+    }
+    if (next != nGlyphs) {
+      throw ('CFF Table CID Font FDSelect format 3 range has bad final GID ' +
+          next);
+    }
+  } else {
+    throw ('CFF Table CID Font FDSelect table has unsupported format ' +
+        format);
+  }
+  return fdSelect;
 }
 
 // Parse the `CFF` table, which contains the glyph outlines in PostScript format.
-parseCFFTable(data, start, font, opt) {
-    font.tables.cff = {};
-    Map<String, dynamic> header = parseCFFHeader(data, start);
-    var nameIndex = parseCFFIndex(data, header["endOffset"], bytesToString);
-    var topDictIndex = parseCFFIndex(data, nameIndex.endOffset, null);
-    var stringIndex = parseCFFIndex(data, topDictIndex.endOffset, bytesToString);
-    var globalSubrIndex = parseCFFIndex(data, stringIndex.endOffset, null);
-    font.gsubrs = globalSubrIndex.objects;
-    font.gsubrsBias = calcCFFSubroutineBias(font.gsubrs);
+parseCFFTable(data, start, Font font, opt) {
+  font.tables["cff"] = {};
+  Map<String, dynamic> header = parseCFFHeader(data, start);
+  Map<String, dynamic> nameIndex =
+      parseCFFIndex(data, header["endOffset"], bytesToString);
+  Map<String, dynamic> topDictIndex =
+      parseCFFIndex(data, nameIndex["endOffset"], null);
+  Map<String, dynamic> stringIndex =
+      parseCFFIndex(data, topDictIndex["endOffset"], bytesToString);
+  Map<String, dynamic> globalSubrIndex =
+      parseCFFIndex(data, stringIndex["endOffset"], null);
+  font.gsubrs = globalSubrIndex["objects"];
+  font.gsubrsBias = calcCFFSubroutineBias(font.gsubrs);
 
-    var topDictArray = gatherCFFTopDicts(data, start, topDictIndex.objects, stringIndex.objects);
-    if (topDictArray.length != 1) {
-        throw('CFF table has too many fonts in \'FontSet\' - count of fonts NameIndex.length = ' + topDictArray.length);
+  var topDictArray = gatherCFFTopDicts(
+      data, start, topDictIndex["objects"], stringIndex["objects"]);
+  if (topDictArray.length != 1) {
+    throw ('CFF table has too many fonts in \'FontSet\' - count of fonts NameIndex.length = ' +
+        topDictArray.length);
+  }
+
+  Map<String, dynamic> topDict = topDictArray[0];
+  font.tables["cff"]["topDict"] = topDict;
+
+  if (topDict["_privateDict"] != null) {
+    font.defaultWidthX = topDict["_privateDict"].defaultWidthX;
+    font.nominalWidthX = topDict["_privateDict"].nominalWidthX;
+  }
+
+  if (topDict["ros"][0] != null && topDict["ros"][1] != null) {
+    font.isCIDFont = true;
+  }
+
+  if (font.isCIDFont) {
+    var fdArrayOffset = topDict["fdArray"];
+    var fdSelectOffset = topDict["fdSelect"];
+    if (fdArrayOffset == 0 || fdSelectOffset == 0) {
+      throw ('Font is marked as a CID font, but FDArray and/or FDSelect information is missing');
     }
+    fdArrayOffset += start;
+    Map<String, dynamic> fdArrayIndex = parseCFFIndex(data, fdArrayOffset, null);
+    var fdArray = gatherCFFTopDicts(
+        data, start, fdArrayIndex["objects"], stringIndex["objects"]);
+    topDict["_fdArray"] = fdArray;
+    fdSelectOffset += start;
+    topDict["_fdSelect"] =
+        parseCFFFDSelect(data, fdSelectOffset, font.numGlyphs, fdArray.length);
+  }
 
-    var topDict = topDictArray[0];
-    font.tables.cff.topDict = topDict;
+  var privateDictOffset = start + topDict["private"][1];
+  Map<String, dynamic> privateDict = parseCFFPrivateDict(
+      data, privateDictOffset, topDict["private"][0], stringIndex["objects"]);
+  font.defaultWidthX = privateDict["defaultWidthX"];
+  font.nominalWidthX = privateDict["nominalWidthX"];
 
-    if (topDict._privateDict) {
-        font.defaultWidthX = topDict._privateDict.defaultWidthX;
-        font.nominalWidthX = topDict._privateDict.nominalWidthX;
+  if (privateDict["subrs"] != 0) {
+    var subrOffset = privateDictOffset + privateDict["subrs"];
+    var subrIndex = parseCFFIndex(data, subrOffset, null);
+    font.subrs = subrIndex.objects;
+    font.subrsBias = calcCFFSubroutineBias(font.subrs);
+  } else {
+    font.subrs = [];
+    font.subrsBias = 0;
+  }
+
+  // Offsets in the top dict are relative to the beginning of the CFF data, so add the CFF start offset.
+  var charStringsIndex;
+  if (opt["lowMemory"] == true) {
+    charStringsIndex =
+        parseCFFIndexLowMemory(data, start + topDict["charStrings"]);
+    font.nGlyphs = charStringsIndex.offsets.length;
+  } else {
+    charStringsIndex =
+        parseCFFIndex(data, start + topDict["charStrings"], null);
+    font.nGlyphs = charStringsIndex["objects"].length;
+  }
+
+  var charset = parseCFFCharset(
+      data, start + topDict["charset"], font.nGlyphs, stringIndex["objects"]);
+  if (topDict["encoding"] == 0) {
+    // Standard encoding
+    font.cffEncoding = new CffEncoding(cffStandardEncoding, charset);
+  } else if (topDict["encoding"] == 1) {
+    // Expert encoding
+    font.cffEncoding = new CffEncoding(cffExpertEncoding, charset);
+  } else {
+    font.cffEncoding =
+        parseCFFEncoding(data, start + topDict["encoding"], charset);
+  }
+
+  // Prefer the CMAP encoding to the CFF encoding.
+  font.encoding = font.encoding ?? font.cffEncoding;
+
+  font.glyphs = new GlyphSet(font, null);
+  if (opt["lowMemory"] == true) {
+    font.push = (i) {
+      var charString = getCffIndexObject(i, charStringsIndex.offsets, data,
+          start + topDict["charStrings"], null);
+      font.glyphs
+          .push(i, cffGlyphLoader(font, i, parseCFFCharstring, charString));
+    };
+  } else {
+    for (var i = 0; i < font.nGlyphs; i += 1) {
+      var charString = charStringsIndex["objects"][i];
+      font.glyphs
+          .push(i, cffGlyphLoader(font, i, parseCFFCharstring, charString));
     }
-
-    if (topDict.ros[0] != null && topDict.ros[1] != null) {
-        font.isCIDFont = true;
-    }
-
-    if (font.isCIDFont) {
-        var fdArrayOffset = topDict.fdArray;
-        var fdSelectOffset = topDict.fdSelect;
-        if (fdArrayOffset == 0 || fdSelectOffset == 0) {
-            throw('Font is marked as a CID font, but FDArray and/or FDSelect information is missing');
-        }
-        fdArrayOffset += start;
-        var fdArrayIndex = parseCFFIndex(data, fdArrayOffset, null);
-        var fdArray = gatherCFFTopDicts(data, start, fdArrayIndex.objects, stringIndex.objects);
-        topDict._fdArray = fdArray;
-        fdSelectOffset += start;
-        topDict._fdSelect = parseCFFFDSelect(data, fdSelectOffset, font.numGlyphs, fdArray.length);
-    }
-
-    var privateDictOffset = start + topDict.private[1];
-    var privateDict = parseCFFPrivateDict(data, privateDictOffset, topDict.private[0], stringIndex.objects);
-    font.defaultWidthX = privateDict.defaultWidthX;
-    font.nominalWidthX = privateDict.nominalWidthX;
-
-    if (privateDict.subrs != 0) {
-        var subrOffset = privateDictOffset + privateDict.subrs;
-        var subrIndex = parseCFFIndex(data, subrOffset, null);
-        font.subrs = subrIndex.objects;
-        font.subrsBias = calcCFFSubroutineBias(font.subrs);
-    } else {
-        font.subrs = [];
-        font.subrsBias = 0;
-    }
-
-    // Offsets in the top dict are relative to the beginning of the CFF data, so add the CFF start offset.
-    var charStringsIndex;
-    if (opt.lowMemory) {
-        charStringsIndex = parseCFFIndexLowMemory(data, start + topDict.charStrings);
-        font.nGlyphs = charStringsIndex.offsets.length;
-    } else {
-        charStringsIndex = parseCFFIndex(data, start + topDict.charStrings, null);
-        font.nGlyphs = charStringsIndex.objects.length;
-    }
-
-    var charset = parseCFFCharset(data, start + topDict.charset, font.nGlyphs, stringIndex.objects);
-    if (topDict.encoding == 0) {
-        // Standard encoding
-        font.cffEncoding = new CffEncoding(cffStandardEncoding, charset);
-    } else if (topDict.encoding == 1) {
-        // Expert encoding
-        font.cffEncoding = new CffEncoding(cffExpertEncoding, charset);
-    } else {
-        font.cffEncoding = parseCFFEncoding(data, start + topDict.encoding, charset);
-    }
-
-    // Prefer the CMAP encoding to the CFF encoding.
-    font.encoding = font.encoding || font.cffEncoding;
-
-    font.glyphs = new GlyphSet(font, null);
-    if (opt.lowMemory) {
-        font._push = (i) {
-            var charString = getCffIndexObject(i, charStringsIndex.offsets, data, start + topDict.charStrings, null);
-            font.glyphs.push(i, cffGlyphLoader(font, i, parseCFFCharstring, charString));
-        };
-    } else {
-        for (var i = 0; i < font.nGlyphs; i += 1) {
-            var charString = charStringsIndex.objects[i];
-            font.glyphs.push(i, cffGlyphLoader(font, i, parseCFFCharstring, charString));
-        }
-    }
+  }
 }
 
 // Convert a string to a String ID (SID).
 // The list of strings is modified in place.
-// function encodeString(s, strings) {
-//     var sid;
+encodeString(s, strings) {
+  var sid;
 
-//     // Is the string in the CFF standard strings?
-//     var i = cffStandardStrings.indexOf(s);
-//     if (i >= 0) {
-//         sid = i;
-//     }
+  // Is the string in the CFF standard strings?
+  var i = cffStandardStrings.indexOf(s);
+  if (i >= 0) {
+      sid = i;
+  }
 
-//     // Is the string already in the string index?
-//     i = strings.indexOf(s);
-//     if (i >= 0) {
-//         sid = i + cffStandardStrings.length;
-//     } else {
-//         sid = cffStandardStrings.length + strings.length;
-//         strings.push(s);
-//     }
+  // Is the string already in the string index?
+  i = strings.indexOf(s);
+  if (i >= 0) {
+      sid = i + cffStandardStrings.length;
+  } else {
+      sid = cffStandardStrings.length + strings.length;
+      strings.push(s);
+  }
 
-//     return sid;
-// }
+  return sid;
+}
 
-// function makeHeader() {
-//     return new table.Record('Header', [
-//         {"name": 'major', "type": 'Card8', "value": 1},
-//         {"name": 'minor', "type": 'Card8', "value": 0},
-//         {"name": 'hdrSize', "type": 'Card8', "value": 4},
-//         {"name": 'major', "type": 'Card8', "value": 1}
-//     ]);
-// }
+makeHeader() {
+  return Record('Header', [
+    {"name": 'major', "type": 'Card8', "value": 1},
+    {"name": 'minor', "type": 'Card8', "value": 0},
+    {"name": 'hdrSize', "type": 'Card8', "value": 4},
+    {"name": 'major', "type": 'Card8', "value": 1}
+  ], null);
+}
 
-// function makeNameIndex(fontNames) {
-//     var t = new table.Record('Name INDEX', [
-//         {"name": 'names', "type": 'INDEX', "value": []}
-//     ]);
-//     t.names = [];
-//     for (var i = 0; i < fontNames.length; i += 1) {
-//         t.names.push({"name": 'name_' + i, "type": 'NAME', "value": fontNames[i]});
-//     }
+makeNameIndex(fontNames) {
+  var t = Record('Name INDEX', [
+      {"name": 'names', "type": 'INDEX', "value": []}
+  ], null);
+  t.names = [];
+  for (var i = 0; i < fontNames.length; i += 1) {
+    t.names.push({"name": 'name_${i}', "type": 'NAME', "value": fontNames[i]});
+  }
 
-//     return t;
-// }
+  return t;
+}
 
 // // Given a dictionary's metadata, create a DICT structure.
-// function makeDict(meta, attrs, strings) {
-//     var m = {};
-//     for (var i = 0; i < meta.length; i += 1) {
-//         var entry = meta[i];
-//         var value = attrs[entry.name];
-//         if (value != null && !equals(value, entry.value)) {
-//             if (entry.type == 'SID') {
-//                 value = encodeString(value, strings);
-//             }
+// makeDict(meta, attrs, strings) {
+//   var m = {};
+//   for (var i = 0; i < meta.length; i += 1) {
+//       var entry = meta[i];
+//       var value = attrs[entry.name];
+//       if (value != null && !equals(value, entry.value)) {
+//           if (entry.type == 'SID') {
+//               value = encodeString(value, strings);
+//           }
 
-//             m[entry.op] = {"name": entry.name, "type": entry.type, "value": value};
-//         }
-//     }
+//           m[entry.op] = {"name": entry.name, "type": entry.type, "value": value};
+//       }
+//   }
 
-//     return m;
+//   return m;
 // }
 
-// // The Top DICT houses the global font attributes.
-// function makeTopDict(attrs, strings) {
-//     var t = new table.Record('Top DICT', [
+// The Top DICT houses the global font attributes.
+// makeTopDict(attrs, strings) {
+//     var t = Record(
+//       'Top DICT', [
 //         {"name": 'dict', "type": 'DICT', "value": {}}
-//     ]);
+//       ], 
+//       null
+//     );
 //     t.dict = makeDict(TOP_DICT_META, attrs, strings);
 //     return t;
 // }
 
-// function makeTopDictIndex(topDict) {
-//     var t = new table.Record('Top DICT INDEX', [
-//         {"name": 'topDicts', "type": 'INDEX', "value": []}
-//     ]);
-//     t.topDicts = [{"name": 'topDict_0', "type": 'TABLE', "value": topDict}];
-//     return t;
-// }
+makeTopDictIndex(topDict) {
+  var t = Record('Top DICT INDEX', [
+      {"name": 'topDicts', "type": 'INDEX', "value": []}
+  ], null);
+  t.topDicts = [{"name": 'topDict_0', "type": 'TABLE', "value": topDict}];
+  return t;
+}
 
-// function makeStringIndex(strings) {
-//     var t = new table.Record('String INDEX', [
-//         {"name": 'strings', "type": 'INDEX', "value": []}
-//     ]);
-//     t.strings = [];
-//     for (var i = 0; i < strings.length; i += 1) {
-//         t.strings.push({"name": 'string_' + i, "type": 'STRING', "value": strings[i]});
-//     }
+makeStringIndex(strings) {
+  var t = Record('String INDEX', [
+    {"name": 'strings', "type": 'INDEX', "value": []}
+  ], null);
+  t.strings = [];
+  for (var i = 0; i < strings.length; i += 1) {
+    t.strings.push({"name": 'string_${i}', "type": 'STRING', "value": strings[i]});
+  }
 
-//     return t;
-// }
+  return t;
+}
 
-// function makeGlobalSubrIndex() {
-//     // Currently we don't use subroutines.
-//     return new table.Record('Global Subr INDEX', [
-//         {"name": 'subrs', "type": 'INDEX', "value": []}
-//     ]);
-// }
+makeGlobalSubrIndex() {
+  // Currently we don't use subroutines.
+  return Record('Global Subr INDEX', [
+      {"name": 'subrs', "type": 'INDEX', "value": []}
+  ], null);
+}
 
-// function makeCharsets(glyphNames, strings) {
-//     var t = new table.Record('Charsets', [
-//         {"name": 'format', "type": 'Card8', "value": 0}
-//     ]);
-//     for (var i = 0; i < glyphNames.length; i += 1) {
-//         var glyphName = glyphNames[i];
-//         var glyphSID = encodeString(glyphName, strings);
-//         t.fields.push({"name": 'glyph_' + i, "type": 'SID', "value": glyphSID});
-//     }
+makeCharsets(glyphNames, strings) {
+  var t = Record('Charsets', [
+    {"name": 'format', "type": 'Card8', "value": 0}
+  ], null);
+  for (var i = 0; i < glyphNames.length; i += 1) {
+      var glyphName = glyphNames[i];
+      var glyphSID = encodeString(glyphName, strings);
+      t.fields.push({"name": 'glyph_${i}', "type": 'SID', "value": glyphSID});
+  }
 
-//     return t;
-// }
+  return t;
+}
 
 // function glyphToOps(glyph) {
 //     var ops = [];

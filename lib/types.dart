@@ -356,14 +356,14 @@ final sizeOf_STRING = sizeOf_CHARARRAY;
  * @param {number} numBytes
  * @returns {string}
  */
-decode_UTF8(data, offset, numBytes) {
-    List<int> codePoints = [];
-    var numChars = numBytes;
-    for (var j = 0; j < numChars; j++, offset += 1) {
-        codePoints[j] = data.getUint8(offset);
-    }
+decode_UTF8(ByteData data, int offset, numBytes) {
+  List<int> codePoints = List<int>.filled(numBytes, 0);
+  var numChars = numBytes;
+  for (var j = 0; j < numChars; j++, offset += 1) {
+    codePoints[j] = data.getUint8(offset);
+  }
 
-    return String.fromCharCodes(codePoints);
+  return String.fromCharCodes(codePoints);
 }
 
 /**

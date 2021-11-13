@@ -5,11 +5,12 @@ library opentype;
 
 import 'package:opentype/tables/index.dart';
 
+
 import './Math.dart' as Math;
 
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/services.dart';
 
 
@@ -29,3 +30,6 @@ part './table.dart';
 part './types.dart';
 part './opentypeFN.dart';
 part './dartHelper.dart';
+// part './bidi.dart';
+// part './tokenizer.dart';
+// part './features/latn/latinLigatures.dart';

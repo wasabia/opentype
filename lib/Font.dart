@@ -58,6 +58,17 @@ class Font {
   late dynamic _hinting;
   late String outlinesFormat;
   late dynamic glyphNames;
+  late dynamic gsubrs;
+  late dynamic gsubrsBias;
+  late dynamic defaultWidthX;
+  late dynamic nominalWidthX;
+  late dynamic subrs;
+  late dynamic subrsBias;
+  late dynamic nGlyphs;
+
+  set push(value) {
+    _push = value;
+  }
 
 
   Font(Map<String, dynamic> options) {
@@ -391,6 +402,7 @@ class Font {
   // draw(ctx, text, x, y, fontSize, options) {
   //   this.getPath(text, x, y, fontSize, options).draw(ctx);
   // }
+
 
   // /**
   //  * Draw the points of all glyphs in the text.

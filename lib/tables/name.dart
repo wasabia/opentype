@@ -528,9 +528,9 @@ getLanguageCode(platformID, languageID, ltag) {
     switch (platformID) {
         case 0:  // Unicode
             if (languageID == 0xFFFF) {
-                return 'und';
-            } else if (ltag) {
-                return ltag[languageID];
+              return 'und';
+            } else if (ltag != null) {
+              return ltag[languageID];
             }
 
             break;

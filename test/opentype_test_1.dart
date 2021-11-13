@@ -11,19 +11,27 @@ void main() {
 
     print(" data.... ${data.length} ");
 
+
+    int t1 = DateTime.now().millisecondsSinceEpoch;
+    
+
     final font = parseBuffer(data, null);
+
+    int t2 = DateTime.now().millisecondsSinceEpoch;
+
+    print(" parse buffer cost ${t2 - t1} ");
     
     print(font);
-    print(font.numGlyphs);
-    print(font.tables);
-    print(font.glyphs.glyphs);
+    // print(font.numGlyphs);
+    // print(font.tables);
+    // print(font.glyphs.glyphs);
 
   });
 }
 
 
 loadFile() async {
-  String filePath = "ttf/en.ttf";
+  String filePath = "ttf/pingfang.ttf";
   final _result = await File(filePath).readAsBytes();
   return _result;
 }

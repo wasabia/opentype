@@ -1,7 +1,7 @@
 name: opentype
-description: A new Flutter package project.
+description: Read and write OpenType fonts using Dart.
 version: 0.0.1
-homepage:
+homepage: https://github.com/wasabia/opentype
 
 environment:
   sdk: ">=2.12.0 <3.0.0"

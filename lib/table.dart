@@ -26,6 +26,10 @@ class Table {
   late num rangeShift;
   late num cmap4Length;
   late num cmap12Offset;
+  late dynamic names;
+  late dynamic dict;
+  late dynamic topDicts;
+  late dynamic strings;
 
   Table(tableName, fields, options) {
 

@@ -7,17 +7,17 @@ part of opentype_tables;
 // import parse from '../parse';
 // import table from '../table';
 
-parseCmapTableFormat12(cmap, p) {
+parseCmapTableFormat12(Map<String, dynamic> cmap, p) {
     //Skip reserved.
     p.parseUShort();
 
     // Length in bytes of the sub-tables.
-    cmap.length = p.parseULong();
-    cmap.language = p.parseULong();
+    cmap["length"] = p.parseULong();
+    cmap["language"] = p.parseULong();
 
     var groupCount;
-    cmap.groupCount = groupCount = p.parseULong();
-    cmap.glyphIndexMap = {};
+    cmap["groupCount"] = groupCount = p.parseULong();
+    cmap["glyphIndexMap"] = {};
 
     for (var i = 0; i < groupCount; i += 1) {
         var startCharCode = p.parseULong();
@@ -25,7 +25,7 @@ parseCmapTableFormat12(cmap, p) {
         var startGlyphId = p.parseULong();
 
         for (var c = startCharCode; c <= endCharCode; c += 1) {
-            cmap.glyphIndexMap[c] = startGlyphId;
+            cmap["glyphIndexMap"][c] = startGlyphId;
             startGlyphId++;
         }
     }

@@ -158,7 +158,6 @@ Function parseBuffer = (Uint8List buffer, opt) {
 
 
     if (signature == String.fromCharCodes([0, 1, 0, 0]) || signature == 'true' || signature == 'typ1') {
-         print("parseBuffer signature is truetype");
         font.outlinesFormat = 'truetype';
         numTables = getUShort(data, 4);
         tableEntries = parseOpenTypeTableEntries(data, numTables);
@@ -297,7 +296,7 @@ Function parseBuffer = (Uint8List buffer, opt) {
         var locaOffsets = parseLocaTable(locaTable["data"], locaTable["offset"], font.numGlyphs, shortVersion);
         Map<String, dynamic> glyfTable = uncompressTable(data, glyfTableEntry);
         font.glyphs = parseGlyfTable(glyfTable["data"], glyfTable["offset"], locaOffsets, font, opt);
-    } else if (cffTableEntry) {
+    } else if (cffTableEntry != null) {
         Map<String, dynamic> cffTable = uncompressTable(data, cffTableEntry);
         parseCFFTable(cffTable["data"], cffTable["offset"], font, opt);
     } else {
@@ -339,7 +338,7 @@ Function parseBuffer = (Uint8List buffer, opt) {
     if (metaTableEntry != null) {
         Map<String, dynamic> metaTable = uncompressTable(data, metaTableEntry);
         font.tables["meta"] = parseMetaTable(metaTable["data"], metaTable["offset"]);
-        font.metas = font.tables["meta"];
+        font.metas = Map<String, dynamic>.from(font.tables["meta"]);
     }
 
     return font;
