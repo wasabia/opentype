@@ -3,7 +3,7 @@ library opentype;
 // import 'string.prototype.codepointat';
 // import inflate from 'tiny-inflate';
 
-import 'package:opentype/tables/index.dart';
+import 'package:opentype_dart/tables/index.dart';
 
 
 import './Math.dart' as Math;

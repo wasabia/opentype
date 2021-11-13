@@ -1,4 +1,4 @@
-name: opentype
+name: opentype_dart
 description: Read and write OpenType fonts using Dart.
 version: 0.0.1
 homepage: https://github.com/wasabia/opentype

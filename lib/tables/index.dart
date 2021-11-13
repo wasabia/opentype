@@ -2,7 +2,7 @@ library opentype_tables;
 
 import 'dart:typed_data';
 
-import 'package:opentype/opentype.dart';
+import 'package:opentype_dart/opentype.dart';
 
 import '../Math.dart' as Math;
 

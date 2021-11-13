@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:opentype/opentype.dart';
+import 'package:opentype_dart/opentype.dart';
 
 void main() {
   test('opentype test 1', () async {
